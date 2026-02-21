@@ -1,5 +1,6 @@
 #include <esp_now.h>
 #include <WiFi.h>
+#include <esp_wifi.h> // เพิ่มไลบรารีนี้สำหรับจัดการ WiFi ระดับลึก
 
 // โครงสร้างข้อมูล (ต้องตรงกับบอร์ดส่ง)
 typedef struct struct_message {
@@ -30,7 +31,15 @@ void setup() {
   // ตั้งค่า WiFi ให้อยู่ในโหมด Station
   WiFi.mode(WIFI_STA);
 
-  // พิมพ์ MAC Address ของบอร์ดนี้ออกมา (จดค่านี้ไปใส่ในบอร์ดส่ง) = 80:F3:DA:53:A8:24
+  // --- ส่วนที่เพิ่มเพื่อเพิ่มระยะทาง (Long Range) ---
+  // 1. ตั้งค่ากำลังส่ง WiFi ให้แรงสุด (19.5 dBm)
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  
+  // 2. เปิดโหมด Long Range (LR)
+  esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_LR);
+  // --------------------------------------------
+
+  // พิมพ์ MAC Address ของบอร์ดนี้ออกมา
   Serial.print("MAC Address ของบอร์ดนี้: ");
   Serial.println(WiFi.macAddress());
 
