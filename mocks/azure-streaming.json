@@ -1,0 +1,4 @@
+[
+  { "DeviceId": "ArduinoUNO-01", "Temperature": 28.5, "Humidity": 70 },
+  { "DeviceId": "ArduinoUNO-02", "Temperature": 30.2, "Humidity": 65 }
+]
