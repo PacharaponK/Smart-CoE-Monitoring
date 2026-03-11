@@ -19,8 +19,8 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 RF24 radio(4, 5); 
-const byte addrR201[6] = "1Node"; 
-const byte addrCoAi[6] = "2Node"; 
+const byte addrR201[6] = "Node1"; 
+const byte addrCoAi[6] = "Node2"; 
 
 typedef struct struct_message {
     char room[10]; 

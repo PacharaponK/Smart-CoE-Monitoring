@@ -10,7 +10,7 @@
 #define SOUND_PIN 39
 
 RF24 radio(CE_PIN, CSN_PIN);
-const byte address[6] = "1Node"; 
+const byte address[6] = "2Node"; 
 DHT dht(DHTPIN, DHT11); 
 
 typedef struct struct_message {
@@ -33,16 +33,15 @@ void setup() {
     radio.setAutoAck(true);       
     radio.setRetries(15, 15);     
     
-    // ⚠️ คงไว้ที่ LOW ก่อนเพื่อทดสอบไฟ
-    radio.setPALevel(RF24_PA_LOW); 
+    radio.setPALevel(RF24_PA_MAX); 
     radio.stopListening();
     
-    Serial.println("✅ nRF24 Node Ready (Room: R201) - Pipe: Node1");
+    Serial.println("✅ nRF24 Node Ready (Room: Co_Ai) - Pipe: Node2");
 }
 
 void loop() {
     Serial.println("\n------------------------------------");
-    strcpy(myData.room, "R201"); 
+    strcpy(myData.room, "Co_Ai"); 
     myData.temp = dht.readTemperature();
     myData.hum = dht.readHumidity();
     myData.rawLight = digitalRead(LDR_PIN);
@@ -56,7 +55,7 @@ void loop() {
     myData.rawSound = sMax - sMin;
 
     // --- ส่วนแสดงผล Debug แบบเต็ม ---
-    Serial.println("[ ข้อมูลเซนเซอร์ R201 ]");
+    Serial.println("[ ข้อมูลเซนเซอร์ Co_Ai ]");
     if (isnan(myData.temp) || isnan(myData.hum)) {
         Serial.println("⚠️ แจ้งเตือน: DHT อ่านค่าไม่ได้ ตรวจสอบสายเสียบ!");
     } else {
