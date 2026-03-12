@@ -55,7 +55,7 @@ export default function Home() {
                 <div>
                   <h2 className="text-2xl font-bold text-gray-800">Alerts</h2>
                   <p className="text-sm text-gray-400 mt-1">
-                    View quality anomalies and system alerts
+                    View system alerts and notifications
                   </p>
                 </div>
                 <div className="clay-card animate-fade-in">

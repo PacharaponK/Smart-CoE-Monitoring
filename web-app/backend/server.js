@@ -13,12 +13,16 @@ loadEnvironment();
 
 const PORT = Number(process.env.PORT || 4000);
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
-const API_GATEWAY_URL = process.env.API_GATEWAY_URL || "https://6g6lrcsukg.execute-api.ap-southeast-1.amazonaws.com";
+const API_GATEWAY_URL =
+  process.env.API_GATEWAY_URL ||
+  "https://6g6lrcsukg.execute-api.ap-southeast-1.amazonaws.com";
 const API_ENDPOINT = process.env.API_ENDPOINT || "sensors";
 const IOT_ENDPOINT = process.env.AWS_IOT_ENDPOINT;
 const IOT_TOPIC = process.env.AWS_IOT_TOPIC || "gateway/+/telemetry/aggregated"; // kept for backward compat
 const IOT_TOPICS = process.env.AWS_IOT_TOPICS
-  ? process.env.AWS_IOT_TOPICS.split(",").map((t) => t.trim()).filter(Boolean)
+  ? process.env.AWS_IOT_TOPICS.split(",")
+      .map((t) => t.trim())
+      .filter(Boolean)
   : [IOT_TOPIC];
 const IOT_CLIENT_ID =
   process.env.AWS_IOT_CLIENT_ID || `iot-dashboard-proxy-${Date.now()}`;
@@ -38,7 +42,6 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
-
 
 let latestTelemetry = null;
 let socketClientCount = 0;
@@ -61,21 +64,21 @@ app.get("/api/realtime/latest", (req, res) => {
 app.get("/api/sensor-data", async (req, res) => {
   try {
     const { deviceId, sensorType, startTime, endTime } = req.query;
-    
+
     // Build query parameters for API Gateway
     const params = {};
     if (deviceId) params.deviceId = deviceId;
     if (sensorType) params.sensorType = sensorType;
     if (startTime) params.startTime = startTime;
     if (endTime) params.endTime = endTime;
-    
+
     const apiUrl = `${API_GATEWAY_URL}/${API_ENDPOINT}`;
     console.log("[Backend] API Gateway URL:", apiUrl);
     console.log("[Backend] API Gateway params:", params);
-    const response = await axios.get(apiUrl, { params });    
+    const response = await axios.get(apiUrl, { params });
     // Handle different response formats
     let items, lastKey, count;
-    
+
     if (Array.isArray(response.data)) {
       // Direct array response
       items = response.data;
@@ -92,7 +95,7 @@ app.get("/api/sensor-data", async (req, res) => {
       lastKey = null;
       count = items.length;
     }
-    
+
     res.json({
       items,
       lastKey,
@@ -101,10 +104,18 @@ app.get("/api/sensor-data", async (req, res) => {
   } catch (error) {
     console.error("[Backend] /api/sensor-data error:", error.message);
     if (error.response) {
-      console.error("[Backend] API Gateway response status:", error.response.status);
-      console.error("[Backend] API Gateway response data:", error.response.data);
+      console.error(
+        "[Backend] API Gateway response status:",
+        error.response.status,
+      );
+      console.error(
+        "[Backend] API Gateway response data:",
+        error.response.data,
+      );
     }
-    res.status(500).json({ error: "Failed to fetch sensor data from API Gateway" });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch sensor data from API Gateway" });
   }
 });
 
@@ -113,8 +124,14 @@ io.on("connection", (socket) => {
   console.log(
     `[Socket] client connected: ${socket.id} (total=${socketClientCount})`,
   );
+  console.log(`[Socket] Connection details:`, {
+    transport: socket.conn.transport.name,
+    address: socket.handshake?.address,
+    userAgent: socket.handshake?.headers["user-agent"]?.substring(0, 50),
+  });
 
   if (latestTelemetry) {
+    console.log(`[Socket] Sending latest telemetry to ${socket.id}`);
     socket.emit("telemetry", latestTelemetry);
   }
 
@@ -123,6 +140,10 @@ io.on("connection", (socket) => {
     console.log(
       `[Socket] client disconnected: ${socket.id} (total=${socketClientCount})`,
     );
+  });
+
+  socket.on("error", (error) => {
+    console.error(`[Socket] Error from client ${socket.id}:`, error);
   });
 });
 
@@ -163,7 +184,8 @@ if (!IOT_ENDPOINT || !certPath || !keyPath || !caPath) {
     console.log("[IoT] Connected. Subscribing to topics:", IOT_TOPICS);
     IOT_TOPICS.forEach((topic) => {
       iotDevice.subscribe(topic, { qos: 0 }, (err) => {
-        if (err) console.error(`[IoT] Failed to subscribe to ${topic}:`, err.message);
+        if (err)
+          console.error(`[IoT] Failed to subscribe to ${topic}:`, err.message);
         else console.log(`[IoT] Subscribed: ${topic}`);
       });
     });
@@ -172,6 +194,10 @@ if (!IOT_ENDPOINT || !certPath || !keyPath || !caPath) {
   iotDevice.on("message", (topic, payloadBuffer) => {
     try {
       const payloadText = payloadBuffer.toString("utf-8");
+      console.log(`[IoT] Received message on topic: ${topic}`);
+      console.log(`[IoT] Payload size: ${payloadBuffer.length} bytes`);
+      console.log(`[IoT] Payload preview: ${payloadText.substring(0, 100)}`);
+
       const parsed = JSON.parse(payloadText);
       const normalized = normalizeIncomingMessage(parsed, topic);
 
@@ -181,9 +207,17 @@ if (!IOT_ENDPOINT || !certPath || !keyPath || !caPath) {
         receivedAt: new Date().toISOString(),
       };
 
+      console.log(`[IoT] Normalized telemetry:`, normalized);
+      console.log(
+        `[Socket] Broadcasting to ${socketClientCount} connected clients...`,
+      );
+
       io.emit("telemetry", latestTelemetry);
+
+      console.log(`[Socket] Telemetry emitted successfully`);
     } catch (error) {
       console.error("[IoT] Failed to parse telemetry payload:", error.message);
+      console.error("[IoT] Raw payload:", payloadBuffer.toString("utf-8"));
     }
   });
 
@@ -192,21 +226,34 @@ if (!IOT_ENDPOINT || !certPath || !keyPath || !caPath) {
     console.error("[IoT] Error:", error?.message || String(error));
     if (error?.code) console.error("[IoT] Error code:", error.code);
     if (error?.errno) console.error("[IoT] Error errno:", error.errno);
-    try { console.error("[IoT] Full error:", JSON.stringify(error)); } catch (_) {}
+    if (error?.syscall) console.error("[IoT] Syscall:", error.syscall);
+    try {
+      console.error("[IoT] Full error object:", JSON.stringify(error, null, 2));
+    } catch (_) {}
+
+    // Broadcast error to all connected clients
+    io.emit("iotError", {
+      message: error?.message || String(error),
+      code: error?.code,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   iotDevice.on("close", () => {
     iotConnected = false;
     console.warn("[IoT] Connection closed");
+    io.emit("iotStatus", { connected: false, status: "closed" });
   });
 
   iotDevice.on("reconnect", () => {
     console.log("[IoT] Attempting to reconnect...");
+    io.emit("iotStatus", { connected: false, status: "reconnecting" });
   });
 
   iotDevice.on("offline", () => {
     iotConnected = false;
     console.warn("[IoT] Device offline");
+    io.emit("iotStatus", { connected: false, status: "offline" });
   });
 }
 
@@ -235,7 +282,6 @@ function normalizeIncomingMessage(parsed, topic) {
     return {
       ...parsed,
       SensorValue: Number(parsed.SensorValue),
-      QualityStatus: Number(parsed.QualityStatus ?? 1),
     };
   }
 
@@ -251,9 +297,6 @@ function normalizeIncomingMessage(parsed, topic) {
           parsed?.DeviceId || parsed?.deviceId || inferDeviceIdFromTopic(topic),
         SensorType: sensorType,
         SensorValue: Number(sensorValue),
-        QualityStatus: Number(
-          parsed?.QualityStatus ?? parsed?.qualityStatus ?? 1,
-        ),
         ...parsed,
       };
     }
@@ -269,7 +312,6 @@ function normalizeIncomingMessage(parsed, topic) {
     SensorValue: Number(
       parsed?.SensorValue ?? parsed?.sensorValue ?? parsed?.value ?? 0,
     ),
-    QualityStatus: Number(parsed?.QualityStatus ?? parsed?.qualityStatus ?? 1),
     ...parsed,
   };
 }

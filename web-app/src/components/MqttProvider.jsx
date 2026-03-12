@@ -20,9 +20,11 @@ export default function MqttProvider({ children }) {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
     if (socketRef.current) {
+      console.log('[MQTT] Disconnecting existing socket...');
       socketRef.current.disconnect();
     }
 
+    console.log('[MQTT] Connecting to backend:', backendUrl);
     const socket = io(backendUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -34,24 +36,41 @@ export default function MqttProvider({ children }) {
 
     socket.on('connect', () => {
       setIsConnected(true);
-      console.log('Socket connected:', socket.id);
+      console.log('[MQTT] Socket connected successfully!');
+      console.log('[MQTT] Socket ID:', socket.id);
+      console.log('[MQTT] Transport:', socket.io.engine.transport.name);
     });
 
-    socket.on('disconnect', () => {
+    socket.on('connect_attempting', () => {
+      console.log('[MQTT] Attempting to connect...');
+    });
+
+    socket.on('disconnect', (reason) => {
       setIsConnected(false);
+      console.warn('[MQTT] Socket disconnected. Reason:', reason);
     });
 
     socket.on('connect_error', (error) => {
       setIsConnected(false);
-      console.error('Socket connect error:', error.message);
+      console.error('[MQTT] Connection error:', {
+        message: error.message,
+        type: error.type,
+        code: error.code,
+        fullError: error,
+      });
+    });
+
+    socket.on('error', (error) => {
+      console.error('[MQTT] Socket error:', error);
     });
 
     socket.on('telemetry', (incoming) => {
+      console.log('[MQTT] Received telemetry:', incoming);
+
       const enriched = {
         DeviceId: incoming?.DeviceId || incoming?.deviceId || 'unknown-device',
         SensorType: incoming?.SensorType || incoming?.sensorType || 'unknown',
         SensorValue: Number(incoming?.SensorValue ?? incoming?.sensorValue ?? incoming?.value ?? 0),
-        QualityStatus: Number(incoming?.QualityStatus ?? incoming?.qualityStatus ?? 1),
         topic: incoming?.topic || '',
         receivedAt: incoming?.receivedAt || new Date().toISOString(),
         ...incoming,
@@ -64,6 +83,14 @@ export default function MqttProvider({ children }) {
         ...prev,
         [enriched.DeviceId]: enriched,
       }));
+    });
+
+    socket.on('iotError', (error) => {
+      console.error('[MQTT] IoT backend error:', error);
+    });
+
+    socket.on('iotStatus', (status) => {
+      console.log('[MQTT] IoT status update:', status);
     });
 
     socketRef.current = socket;

@@ -78,23 +78,6 @@ export default function DataTable() {
     setPageKeys([null]);
   };
 
-  const getQualityBadge = (status) => {
-    if (status === 1) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          ปกติ
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-500 border border-red-200">
-        <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-        ผิดปกติ
-      </span>
-    );
-  };
-
   const formatTimestamp = (ts) => {
     try {
       return new Date(ts).toLocaleString('th-TH', {
@@ -163,7 +146,7 @@ export default function DataTable() {
                 <option value="">All Types</option>
                 <option value="temperature">Temperature</option>
                 <option value="humidity">Humidity</option>
-                <option value="pressure">Pressure</option>
+                <option value="sound">Sound</option>
                 <option value="light">Light</option>
                 <option value="motion">Motion</option>
               </select>
@@ -210,22 +193,19 @@ export default function DataTable() {
               <th className="text-right py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
                 Value
               </th>
-              <th className="text-center py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
-                Quality
-              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-gray-400">
+                <td colSpan={4} className="py-12 text-center text-gray-400">
                   <RefreshCw size={24} className="animate-spin mx-auto mb-2" />
                   Loading...
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-gray-400">
+                <td colSpan={4} className="py-12 text-center text-gray-400">
                   <Database size={32} className="mx-auto mb-2 opacity-40" />
                   No data found
                 </td>
@@ -254,9 +234,6 @@ export default function DataTable() {
                     {typeof item.SensorValue === 'number'
                       ? item.SensorValue.toFixed(2)
                       : item.SensorValue}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    {getQualityBadge(item.QualityStatus)}
                   </td>
                 </tr>
               ))

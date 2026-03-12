@@ -15,9 +15,8 @@ export default function Dashboard() {
     const devices = new Set(messages.map((m) => m.DeviceId).filter(Boolean));
     const temps = messages.filter((m) => m.SensorType === 'temperature').map((m) => m.SensorValue);
     const humids = messages.filter((m) => m.SensorType === 'humidity').map((m) => m.SensorValue);
-    const pressures = messages.filter((m) => m.SensorType === 'pressure').map((m) => m.SensorValue);
-    const normal = messages.filter((m) => m.QualityStatus === 1).length;
-    const anomaly = messages.filter((m) => m.QualityStatus === 0).length;
+    const sounds = messages.filter((m) => m.SensorType === 'sound').map((m) => m.SensorValue);
+    const lights = messages.filter((m) => m.SensorType === 'light').map((m) => m.SensorValue);
 
     const avg = (arr) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
 
@@ -25,9 +24,8 @@ export default function Dashboard() {
       totalDevices: devices.size,
       avgTemperature: temps.length > 0 ? avg(temps) : 0,
       avgHumidity: humids.length > 0 ? avg(humids) : 0,
-      avgPressure: pressures.length > 0 ? avg(pressures) : 0,
-      normalCount: normal,
-      anomalyCount: anomaly,
+      avgSound: sounds.length > 0 ? avg(sounds) : 0,
+      avgLight: lights.length > 0 ? avg(lights) : 0,
       totalMessages: messages.length,
     };
   }, [messages]);
@@ -64,20 +62,19 @@ export default function Dashboard() {
           trend={2.3}
         />
         <StatCard
-          title="Avg Humidity"
-          value={stats.avgHumidity.toFixed(1)}
-          unit="%"
-          icon="activity"
-          gradient="teal"
-          trend={-1.5}
+          title="Avg Sound Level"
+          value={stats.avgSound.toFixed(1)}
+          unit="dB"
+          icon="volume-2"
+          gradient="green"
+          trend={0.8}
         />
         <StatCard
-          title="Data Quality"
-          value={`${stats.normalCount}/${stats.normalCount + stats.anomalyCount}`}
-          unit="normal"
-          icon="check"
-          gradient="purple"
-          subtitle={`${stats.anomalyCount} anomalies detected`}
+          title="Light Status"
+          value={stats.avgLight === 1 ? 'ON' : 'OFF'}
+          unit=""
+          icon="lightbulb"
+          gradient="yellow"
         />
       </div>
 
@@ -105,18 +102,16 @@ export default function Dashboard() {
               color="#14b8a6"
             />
             <SensorGauge
-              value={stats.avgPressure}
-              max={1100}
-              label="Pressure"
-              color="#8b5cf6"
-              size={120}
+              value={stats.avgSound}
+              max={120}
+              label="Sound (dB)"
+              color="#22c55e"
             />
             <SensorGauge
-              value={stats.normalCount}
-              max={Math.max(stats.normalCount + stats.anomalyCount, 1)}
-              label="Quality"
-              color="#3b82f6"
-              size={120}
+              value={stats.avgLight}
+              max={1}
+              label="Light (On/Off)"
+              color="#fbbf24"
             />
           </div>
         </div>
