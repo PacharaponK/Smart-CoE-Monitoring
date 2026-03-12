@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import awsIoTFrontend from '@/lib/aws-iot-frontend';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -23,14 +21,15 @@ interface SensorData {
 }
 
 export const RealTimeChart = ({ sensorType }: { sensorType: string }) => {
-  const [data, setData] = useState<any[]>([]);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [data, setData] = useState<Array<{time: string; value: number}>>([]);
 
   useEffect(() => {
-    const socketIo = io();
-    setSocket(socketIo);
-
-    socketIo.on('sensorData', (newData: SensorData) => {
+    // Connect to AWS IoT frontend
+    awsIoTFrontend.connect();
+    
+    // Register message handler
+    const handlerKey = `chart-${sensorType}`;
+    awsIoTFrontend.onMessage(handlerKey, (newData: SensorData) => {
       if (newData.SensorType === sensorType) {
         setData((prev) => {
           const updated = [...prev, {
@@ -43,7 +42,7 @@ export const RealTimeChart = ({ sensorType }: { sensorType: string }) => {
     });
 
     return () => {
-      socketIo.disconnect();
+      awsIoTFrontend.removeMessageHandler(handlerKey);
     };
   }, [sensorType]);
 

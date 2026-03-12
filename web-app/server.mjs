@@ -2,10 +2,43 @@ import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
 import { parse } from "url";
+import sql from "mssql";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
 const port = 3000;
+
+// Database configuration
+const connectionString = process.env.SqlConnectionString;
+let config;
+
+if (connectionString) {
+  // Parse connection string
+  const connStr = connectionString.replace(/^["']|["']$/g, '');
+  config = {
+    server: connStr.match(/Server=tcp:([^,;]+)/i)?.[1] || '',
+    database: connStr.match(/Initial Catalog=([^;]+)/i)?.[1] || '',
+    user: connStr.match(/User ID=([^;]+)/i)?.[1] || '',
+    password: connStr.match(/Password=([^;]+)/i)?.[1] || '',
+    options: {
+      encrypt: true,
+      trustServerCertificate: false,
+      connectTimeout: 30000,
+      requestTimeout: 30000,
+    },
+  };
+} else {
+  config = {
+    server: process.env.DB_SERVER || '',
+    database: process.env.DB_NAME || '',
+    user: process.env.DB_USER || '',
+    password: process.env.DB_PASSWORD || '',
+    options: {
+      encrypt: true,
+      trustServerCertificate: false,
+    },
+  };
+}
 
 // when using middleware `hostname` and `port` must be provided below
 const app = next({ dev, hostname, port });
@@ -27,20 +60,31 @@ app.prepare().then(() => {
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
 
-    // Simulation of real-time sensor data
-    const sensorInterval = setInterval(() => {
-      const devices = ["DEV-001", "DEV-002", "DEV-003"];
-      const sensorTypes = ["Temperature", "Humidity", "Pressure"];
-      
-      const randomData = {
-        DeviceId: devices[Math.floor(Math.random() * devices.length)],
-        SensorType: sensorTypes[Math.floor(Math.random() * sensorTypes.length)],
-        SensorValue: (Math.random() * (100 - 10) + 10).toFixed(2),
-        Timestamp: new Date().toISOString(),
-      };
+    // Function to fetch latest sensor data from database
+    const fetchLatestData = async () => {
+      try {
+        const pool = await sql.connect(config);
+        const result = await pool.request()
+          .query(`
+            SELECT TOP 1 DeviceId, SensorType, SensorValue, CreatedAt as Timestamp
+            FROM Telemetry 
+            ORDER BY CreatedAt DESC
+          `);
+        
+        if (result.recordset.length > 0) {
+          socket.emit("sensorData", result.recordset[0]);
+        }
+        await pool.close();
+      } catch (err) {
+        console.error('Database error:', err);
+      }
+    };
 
-      socket.emit("sensorData", randomData);
-    }, 2000);
+    // Send latest data immediately on connection
+    fetchLatestData();
+
+    // Poll for new data every 5 seconds
+    const sensorInterval = setInterval(fetchLatestData, 5000);
 
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id);

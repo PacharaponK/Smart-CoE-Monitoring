@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import awsIoTFrontend from '@/lib/aws-iot-frontend';
 import { ClayCard } from '../ui/ClayCard';
 import { LucideIcon } from 'lucide-react';
 
@@ -17,13 +17,20 @@ export const StatusCard: React.FC<StatusCardProps> = ({ label, unit, sensorType,
   const [value, setValue] = useState<string>('--');
 
   useEffect(() => {
-    const socket = io();
-    socket.on('sensorData', (data) => {
+    // Connect to AWS IoT frontend
+    awsIoTFrontend.connect();
+    
+    // Register message handler
+    const handlerKey = `status-card-${sensorType}`;
+    awsIoTFrontend.onMessage(handlerKey, (data) => {
       if (data.SensorType === sensorType) {
-        setValue(parseFloat(data.SensorValue).toFixed(1));
+        setValue(parseFloat(data.SensorValue.toString()).toFixed(1));
       }
     });
-    return () => { socket.disconnect(); };
+
+    return () => { 
+      awsIoTFrontend.removeMessageHandler(handlerKey);
+    };
   }, [sensorType]);
 
   return (

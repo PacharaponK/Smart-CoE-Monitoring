@@ -1,55 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { poolPromise, sql } from '@/lib/db';
+
+// AWS API Gateway endpoint
+const API_BASE_URL = 'https://6g6lrcsukg.execute-api.ap-southeast-1.amazonaws.com';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const page = searchParams.get('page') || '1';
+    const limit = searchParams.get('limit') || searchParams.get('pageSize') || '50';
     const deviceId = searchParams.get('deviceId');
     const sensorType = searchParams.get('sensorType');
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '10');
     
-    const offset = (page - 1) * pageSize;
-
-    const pool = await poolPromise;
-    let query = `SELECT * FROM Telemetry WHERE 1=1`;
-    let countQuery = `SELECT COUNT(*) as total FROM Telemetry WHERE 1=1`;
-
-    if (deviceId) {
-      query += ` AND DeviceId = @deviceId`;
-      countQuery += ` AND DeviceId = @deviceId`;
-    }
-    if (sensorType) {
-      query += ` AND SensorType = @sensorType`;
-      countQuery += ` AND SensorType = @sensorType`;
-    }
-
-    query += ` ORDER BY CreatedAt DESC OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY`;
-
-    const request = pool.request();
-    if (deviceId) request.input('deviceId', sql.VarChar(50), deviceId);
-    if (sensorType) request.input('sensorType', sql.VarChar(50), sensorType);
-    request.input('offset', sql.Int, offset);
-    request.input('pageSize', sql.Int, pageSize);
-
-    const [dataResult, countResult] = await Promise.all([
-      request.query(query),
-      request.query(countQuery)
-    ]);
-
-    const total = countResult.recordset[0].total;
-
-    return NextResponse.json({
-      data: dataResult.recordset,
-      pagination: {
-        total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize)
-      }
+    // Build query parameters for AWS API
+    const params = new URLSearchParams({
+      page,
+      limit,
+      ...(deviceId && { deviceId }),
+      ...(sensorType && { sensorType })
     });
-  } catch (err: any) {
-    console.error(err);
-    return NextResponse.json({ error: 'Database error', details: err.message }, { status: 500 });
+    
+    const apiUrl = `${API_BASE_URL}/sensors?${params.toString()}`;
+    
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error in telemetry API:', error);
+    return NextResponse.json({ error: 'Failed to fetch telemetry data' }, { status: 500 });
   }
 }

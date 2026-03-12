@@ -3,15 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar, Sidebar } from '@/components/layout/Navigation';
 import { ClayCard } from '@/components/ui/ClayCard';
-import { Search, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface TelemetryData {
-  Id: number;
+  ExpireTime?: number;
   DeviceId: string;
-  SensorType: string;
+  Timestamp: string;
   SensorValue: number;
   QualityStatus: number;
-  CreatedAt: string;
+  SensorType: string;
 }
 
 export default function HistoryPage() {
@@ -47,6 +47,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, deviceId, sensorType]);
 
   return (
@@ -61,7 +62,7 @@ export default function HistoryPage() {
               Historical Data
             </h1>
             <p className="text-gray-500 font-medium">
-              Browse and filter past telemetry records from the database.
+              Browse and filter past telemetry records from AWS IoT.
             </p>
           </header>
 
@@ -92,6 +93,7 @@ export default function HistoryPage() {
                   <option value="Temperature">Temperature</option>
                   <option value="Humidity">Humidity</option>
                   <option value="Pressure">Pressure</option>
+                  <option value="Unknown">Unknown</option>
                 </select>
               </div>
               <button 
@@ -120,9 +122,9 @@ export default function HistoryPage() {
                     <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-medium">Loading records...</td></tr>
                   ) : data.length === 0 ? (
                     <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500 font-medium">No records found.</td></tr>
-                  ) : data.map((item) => (
-                    <tr key={item.Id} className="hover:bg-white transition-colors">
-                      <td className="px-6 py-4 font-mono text-sm text-gray-400">{item.Id}</td>
+                  ) : data.map((item, index) => (
+                    <tr key={`${item.DeviceId}-${item.Timestamp}-${index}`} className="hover:bg-white transition-colors">
+                      <td className="px-6 py-4 font-mono text-sm text-gray-400">{index + 1}</td>
                       <td className="px-6 py-4 font-bold text-gray-800">{item.DeviceId}</td>
                       <td className="px-6 py-4">
                         <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase">
@@ -137,7 +139,7 @@ export default function HistoryPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {new Date(item.CreatedAt).toLocaleString()}
+                        {new Date(item.Timestamp).toLocaleString()}
                       </td>
                     </tr>
                   ))}
