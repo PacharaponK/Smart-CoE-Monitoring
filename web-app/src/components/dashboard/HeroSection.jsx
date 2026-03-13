@@ -23,7 +23,7 @@ export default function HeroSection() {
               <span className="text-[10px] font-black uppercase tracking-[0.3em]">PSU Engineering</span>
             </div>
             <h4 className="text-4xl font-black text-gray-800 leading-[1.1] tracking-tight">
-              ตึกวิศวกรรม <br/>คอมพิวเตอร์ <br/>(CoE Building)
+              Smart CoE <br/>Monitoring
             </h4>
             <p className="text-gray-500 text-sm leading-relaxed font-medium max-w-sm">
               ศูนย์กลางการเรียนการสอนและวิจัยนวัตกรรมด้านวิศวกรรมคอมพิวเตอร์ มหาวิทยาลัยสงขลานครินทร์ 
