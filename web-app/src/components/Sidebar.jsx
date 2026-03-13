@@ -8,14 +8,14 @@ import {
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'devices', label: 'Devices', icon: Radio },
-  { id: 'data', label: 'Historical Data', icon: Database },
-  { id: 'alerts', label: 'Alerts', icon: Bell },
+  { id: 'devices', label: 'อุปกรณ์ (Devices)', icon: Radio },
+  { id: 'data', label: 'ข้อมูลย้อนหลัง', icon: Database },
+  { id: 'alerts', label: 'การแจ้งเตือน', icon: Bell },
 ];
 
 const bottomItems = [
-  { id: 'help', label: 'Help', icon: HelpCircle },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'help', label: 'ความช่วยเหลือ', icon: HelpCircle },
+  { id: 'settings', label: 'ตั้งค่า', icon: Settings },
 ];
 
 export default function Sidebar({ activeTab, onTabChange }) {
@@ -26,7 +26,7 @@ export default function Sidebar({ activeTab, onTabChange }) {
       className={`fixed top-0 left-0 h-screen bg-white z-30 flex flex-col transition-all duration-300 ease-in-out ${collapsed ? 'w-[72px]' : 'w-64'
         }`}
       style={{
-        boxShadow: '4px 0 16px rgba(0, 0, 0, 0.04)',
+        boxShadow: '8px 0 24px #d1d1d9',
       }}
     >
       {/* Logo */}
@@ -37,7 +37,7 @@ export default function Sidebar({ activeTab, onTabChange }) {
         {!collapsed && (
           <div className="overflow-hidden">
             <h1 className="text-sm font-bold text-gray-800 whitespace-nowrap">Smart CoE</h1>
-            <p className="text-xs text-gray-400 whitespace-nowrap">IoT Monitoring</p>
+            <p className="text-xs text-gray-400 whitespace-nowrap">ระบบตรวจวัด IoT</p>
           </div>
         )}
       </div>

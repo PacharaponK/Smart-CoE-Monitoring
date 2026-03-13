@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, ChevronLeft, ChevronRight, Filter, Download, RefreshCw } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Filter, Download, RefreshCw, Activity, MapPin } from 'lucide-react';
+import ClaySelect from './ClaySelect';
 
 export default function DataTable() {
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
@@ -16,6 +17,7 @@ export default function DataTable() {
   // Filters
   const [deviceId, setDeviceId] = useState('');
   const [sensorType, setSensorType] = useState('');
+  const [room, setRoom] = useState('');
   const [limit] = useState(20);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -26,6 +28,7 @@ export default function DataTable() {
       const params = new URLSearchParams();
       if (deviceId) params.set('deviceId', deviceId);
       if (sensorType) params.set('sensorType', sensorType);
+      if (room) params.set('room', room);
       params.set('limit', String(limit));
       if (exclusiveStartKey) {
         params.set('lastKey', JSON.stringify(exclusiveStartKey));
@@ -44,7 +47,7 @@ export default function DataTable() {
     } finally {
       setLoading(false);
     }
-  }, [backendUrl, deviceId, sensorType, limit]);
+  }, [backendUrl, deviceId, sensorType, room, limit]);
 
   useEffect(() => {
     fetchData();
@@ -74,9 +77,26 @@ export default function DataTable() {
   const handleReset = () => {
     setDeviceId('');
     setSensorType('');
+    setRoom('');
     setCurrentPage(0);
     setPageKeys([null]);
   };
+
+  const sensorTypeOptions = [
+    { label: 'ทุกประเภท (All Types)', value: '' },
+    { label: 'Temperature (อุณหภูมิ)', value: 'temperature' },
+    { label: 'Humidity (ความชื้น)', value: 'humidity' },
+    { label: 'Sound (ระดับเสียง)', value: 'sound' },
+    { label: 'Light (ความสว่าง)', value: 'light' },
+    { label: 'Motion (การเคลื่อนไหว)', value: 'motion' },
+  ];
+
+  const roomOptions = [
+    { label: 'ทุกห้อง (All Rooms)', value: '' },
+    { label: 'R200', value: 'R200' },
+    { label: 'R201', value: 'R201' },
+    { label: 'Co_Ai', value: 'Co_Ai' },
+  ];
 
   const formatTimestamp = (ts) => {
     try {
@@ -95,94 +115,104 @@ export default function DataTable() {
 
   return (
     <div className="clay-card animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <h3 className="text-lg font-bold text-gray-700">Historical Sensor Data</h3>
+      {/* ส่วนหัว (Header) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-50 rounded-xl text-indigo-500">
+            <Activity size={20} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-700">ประวัติข้อมูล Telemetry</h3>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`clay-button !px-3 !py-2 text-sm flex items-center gap-2 ${showFilters ? 'gradient-purple' : 'bg-gray-100 !text-gray-600'
+            className={`clay-button !px-4 !py-2 text-sm flex items-center gap-2 transition-all duration-300 ${showFilters ? 'gradient-purple scale-105' : 'bg-gray-100 !text-gray-600'
               }`}
           >
             <Filter size={14} />
-            Filters
+            {showFilters ? 'ซ่อนตัวกรอง' : 'แสดงตัวกรอง'}
           </button>
           <button
             onClick={() => fetchData(pageKeys[currentPage])}
-            className="clay-button !px-3 !py-2 bg-gray-100 !text-gray-600 text-sm flex items-center gap-2"
+            className="clay-button !px-4 !py-2 bg-gray-100 !text-gray-600 text-sm flex items-center gap-2"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
+            รีเฟรช
           </button>
         </div>
       </div>
 
-      {/* Filters Panel */}
+      {/* แผงตัวกรอง (Filters Panel) */}
       {showFilters && (
-        <div className="clay-card-inset mb-4 animate-slide-up">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="clay-card-inset mb-6 animate-slide-up">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Device ID</label>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 ml-1 uppercase tracking-wider">Device ID</label>
+              <div className="relative group">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <input
                   type="text"
                   value={deviceId}
                   onChange={(e) => setDeviceId(e.target.value)}
-                  placeholder="e.g., gateway-one"
-                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-gray-200 text-sm
-                    focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent transition"
+                  placeholder="เช่น gateway-one"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border-none shadow-sm text-sm font-semibold text-gray-700
+                    focus:ring-2 focus:ring-blue-300 transition-all outline-none placeholder:text-gray-300"
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Sensor Type</label>
-              <select
-                value={sensorType}
-                onChange={(e) => setSensorType(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-white border border-gray-200 text-sm
-                  focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent transition"
-              >
-                <option value="">All Types</option>
-                <option value="temperature">Temperature</option>
-                <option value="humidity">Humidity</option>
-                <option value="sound">Sound</option>
-                <option value="light">Light</option>
-                <option value="motion">Motion</option>
-              </select>
-            </div>
+            
+            <ClaySelect
+              label="Sensor Type (ประเภทเซ็นเซอร์)"
+              value={sensorType}
+              onChange={setSensorType}
+              options={sensorTypeOptions}
+              icon={Activity}
+            />
+
+            <ClaySelect
+              label="Room (ห้อง)"
+              value={room}
+              onChange={setRoom}
+              options={roomOptions}
+              icon={MapPin}
+            />
+
             <div className="flex items-end gap-2">
               <button
                 onClick={handleFilter}
-                className="clay-button gradient-blue text-sm flex-1"
+                className="clay-button gradient-blue text-sm flex-1 h-[42px] flex items-center justify-center gap-2"
               >
-                Apply
+                <Filter size={14} />
+                นำไปใช้
               </button>
               <button
                 onClick={handleReset}
-                className="clay-button bg-gray-200 !text-gray-600 text-sm"
+                className="clay-button bg-gray-200 !text-gray-600 text-sm h-[42px] flex items-center justify-center px-4"
               >
-                Reset
+                รีเซ็ต
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Error */}
+      {/* ข้อความแจ้งเตือนเมื่อเกิดข้อผิดพลาด */}
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-600">
           {error}
         </div>
       )}
 
-      {/* Table */}
+      {/* ตารางข้อมูล (Table) */}
       <div className="overflow-x-auto rounded-2xl border border-gray-100">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50/80">
               <th className="text-left py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
                 Device ID
+              </th>
+              <th className="text-left py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
+                Room
               </th>
               <th className="text-left py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
                 Timestamp
@@ -198,16 +228,16 @@ export default function DataTable() {
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={4} className="py-12 text-center text-gray-400">
+                <td colSpan={5} className="py-12 text-center text-gray-400">
                   <RefreshCw size={24} className="animate-spin mx-auto mb-2" />
-                  Loading...
+                  กำลังโหลดข้อมูล...
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-12 text-center text-gray-400">
+                <td colSpan={5} className="py-12 text-center text-gray-400">
                   <Database size={32} className="mx-auto mb-2 opacity-40" />
-                  No data found
+                  ไม่พบข้อมูล
                 </td>
               </tr>
             ) : (
@@ -220,6 +250,11 @@ export default function DataTable() {
                     <span className="inline-flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-blue-400" />
                       <span className="font-medium text-gray-700">{item.DeviceId}</span>
+                    </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-medium capitalize">
+                      {item.Room || item.room || 'ไม่ระบุ'}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-gray-500 font-mono text-xs">
@@ -242,10 +277,10 @@ export default function DataTable() {
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* ส่วนควบคุมหน้า (Pagination) */}
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
         <p className="text-xs text-gray-400">
-          Page {currentPage + 1} · {data.length} items shown
+          หน้า {currentPage + 1} · แสดง {data.length} รายการ
         </p>
         <div className="flex items-center gap-2">
           <button
@@ -254,14 +289,14 @@ export default function DataTable() {
             className="clay-button !px-3 !py-1.5 bg-gray-100 !text-gray-600 text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
           >
             <ChevronLeft size={14} />
-            Prev
+            ก่อนหน้า
           </button>
           <button
             onClick={handleNextPage}
             disabled={!lastKey}
             className="clay-button !px-3 !py-1.5 bg-gray-100 !text-gray-600 text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
           >
-            Next
+            ถัดไป
             <ChevronRight size={14} />
           </button>
         </div>

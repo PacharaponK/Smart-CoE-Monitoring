@@ -49,7 +49,7 @@ export default function StatCard({
               }`}>
               <span>{trend >= 0 ? '↑' : '↓'}</span>
               <span>{Math.abs(trend)}%</span>
-              <span className="text-gray-400 ml-1">vs last hour</span>
+              <span className="text-gray-400 ml-1">เทียบกับชั่วโมงที่แล้ว</span>
             </div>
           )}
           {subtitle && (
