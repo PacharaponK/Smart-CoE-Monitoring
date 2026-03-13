@@ -19,6 +19,7 @@ Thumbs.db
 
 # Project-specific ignores
 node_modules/
+secrets/
 __pycache__/
 *.pyc
 *.swp
