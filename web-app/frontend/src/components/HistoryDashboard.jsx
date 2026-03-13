@@ -35,7 +35,8 @@ export default function HistoryDashboard() {
       if (endTime) params.set('endTime', new Date(endTime).toISOString());
       params.set('limit', String(limit));
 
-      const res = await fetch(`${backendUrl}/api/sensor-data?${params.toString()}`);
+      const baseUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
+      const res = await fetch(`${baseUrl}/api/sensor-data?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch data');
 
       const result = await res.json();

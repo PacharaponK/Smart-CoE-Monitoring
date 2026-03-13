@@ -13,12 +13,14 @@ loadEnvironment();
 
 const PORT = Number(process.env.PORT || 4000);
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+const ALLOWED_ORIGINS = FRONTEND_ORIGIN.split(",").map(o => o.trim());
+
 const API_GATEWAY_URL =
   process.env.API_GATEWAY_URL ||
   "https://6g6lrcsukg.execute-api.ap-southeast-1.amazonaws.com";
 const API_ENDPOINT = process.env.API_ENDPOINT || "sensors";
 const IOT_ENDPOINT = process.env.AWS_IOT_ENDPOINT;
-const IOT_TOPIC = process.env.AWS_IOT_TOPIC || "gateway/+/telemetry/aggregated"; // kept for backward compat
+const IOT_TOPIC = process.env.AWS_IOT_TOPIC || "gateway/+/telemetry/aggregated";
 const IOT_TOPICS = process.env.AWS_IOT_TOPICS
   ? process.env.AWS_IOT_TOPICS.split(",")
       .map((t) => t.trim())
@@ -32,16 +34,28 @@ const keyPath = resolvePath(process.env.PATH_TO_KEY);
 const caPath = resolvePath(process.env.PATH_TO_ROOT_CA);
 
 const app = express();
-app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes("*") || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true 
+}));
 app.use(express.json());
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: FRONTEND_ORIGIN,
+    origin: ALLOWED_ORIGINS.includes("*") ? true : ALLOWED_ORIGINS,
     methods: ["GET", "POST"],
+    credentials: true
   },
-  transports: ["websocket"], // Force WebSocket only, no polling
+  transports: ["websocket"], 
 });
 
 let latestTelemetry = null;

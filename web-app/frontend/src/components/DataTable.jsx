@@ -39,7 +39,8 @@ export default function DataTable({ externalData = null, externalLoading = false
         params.set('lastKey', JSON.stringify(exclusiveStartKey));
       }
 
-      const res = await fetch(`${backendUrl}/api/sensor-data?${params.toString()}`);
+      const baseUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
+      const res = await fetch(`${baseUrl}/api/sensor-data?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch data');
 
       const result = await res.json();
