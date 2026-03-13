@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, Database, Settings, ChevronLeft, ChevronRight,
-  Radio, Activity, Bell, HelpCircle,
+  Radio, Activity, Bell, HelpCircle, Image as ImageIcon
 } from 'lucide-react';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'devices', label: 'อุปกรณ์', icon: Radio },
+  { id: 'devices', label: 'อุปกรณ์  ', icon: Radio },
   { id: 'data', label: 'ข้อมูลย้อนหลัง', icon: Database },
+  { id: 'images', label: 'รูปภาพห้องเรียน', icon: ImageIcon },
   { id: 'alerts', label: 'การแจ้งเตือน', icon: Bell },
 ];
 
