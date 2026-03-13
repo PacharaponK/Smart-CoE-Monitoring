@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Activity, MapPin } from 'lucide-react';
+import { Monitor, Activity, Building2 } from 'lucide-react';
 import ClaySelect from '../ClaySelect';
 import StatusIndicator from '../StatusIndicator';
 
@@ -15,7 +15,7 @@ export default function DashboardHeader({
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
       <div className="flex items-center gap-4">
         <div className="gradient-blue p-3 rounded-2xl shadow-lg shadow-blue-200 animate-bounce-slow">
-          <LayoutDashboard className="text-white" size={24} />
+          <Monitor className="text-white" size={24} />
         </div>
         <div>
           <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Dashboard</h2>
@@ -32,7 +32,7 @@ export default function DashboardHeader({
           onChange={onRoomChange}
           options={roomOptions}
           placeholder="เลือกห้อง"
-          icon={MapPin}
+          icon={Building2}
           className="w-48"
         />
         <StatusIndicator isConnected={isConnected} onReconnect={onReconnect} />

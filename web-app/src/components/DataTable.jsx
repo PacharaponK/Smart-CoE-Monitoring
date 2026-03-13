@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, ChevronLeft, ChevronRight, Filter, Download, RefreshCw, Activity, MapPin } from 'lucide-react';
 import ClaySelect from './ClaySelect';
 
-export default function DataTable() {
+export default function DataTable({ externalData = null, externalLoading = false }) {
+  const isControlled = externalData !== null;
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
-  const [data, setData] = useState([]);
+  const [internalData, setInternalData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastKey, setLastKey] = useState(null);
@@ -14,14 +15,18 @@ export default function DataTable() {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Filters
+  // Filters (only used if not controlled)
   const [deviceId, setDeviceId] = useState('');
   const [sensorType, setSensorType] = useState('');
   const [room, setRoom] = useState('');
   const [limit] = useState(20);
   const [showFilters, setShowFilters] = useState(false);
 
+  const data = isControlled ? externalData : internalData;
+  const isLoading = isControlled ? externalLoading : loading;
+
   const fetchData = useCallback(async (exclusiveStartKey = null) => {
+    if (isControlled) return;
     setLoading(true);
     setError(null);
     try {
@@ -38,20 +43,22 @@ export default function DataTable() {
       if (!res.ok) throw new Error('Failed to fetch data');
 
       const result = await res.json();
-      setData(result.items);
+      setInternalData(result.items);
       setLastKey(result.lastKey);
       setTotalCount(result.count);
     } catch (err) {
       setError(err.message);
-      setData([]);
+      setInternalData([]);
     } finally {
       setLoading(false);
     }
-  }, [backendUrl, deviceId, sensorType, room, limit]);
+  }, [backendUrl, deviceId, sensorType, room, limit, isControlled]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!isControlled) {
+      fetchData();
+    }
+  }, [fetchData, isControlled]);
 
   const handleNextPage = () => {
     if (!lastKey) return;
@@ -121,29 +128,33 @@ export default function DataTable() {
           <div className="p-2 bg-indigo-50 rounded-xl text-indigo-500">
             <Activity size={20} />
           </div>
-          <h3 className="text-lg font-bold text-gray-700">ประวัติข้อมูล Telemetry</h3>
+          <h3 className="text-lg font-bold text-gray-700">
+            {isControlled ? 'ตารางข้อมูลรายการ' : 'ประวัติข้อมูล Telemetry'}
+          </h3>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`clay-button !px-4 !py-2 text-sm flex items-center gap-2 transition-all duration-300 ${showFilters ? 'gradient-purple scale-105' : 'bg-gray-100 !text-gray-600'
-              }`}
-          >
-            <Filter size={14} />
-            {showFilters ? 'ซ่อนตัวกรอง' : 'แสดงตัวกรอง'}
-          </button>
-          <button
-            onClick={() => fetchData(pageKeys[currentPage])}
-            className="clay-button !px-4 !py-2 bg-gray-100 !text-gray-600 text-sm flex items-center gap-2"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            รีเฟรช
-          </button>
-        </div>
+        {!isControlled && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`clay-button !px-4 !py-2 text-sm flex items-center gap-2 transition-all duration-300 ${showFilters ? 'gradient-purple scale-105' : 'bg-gray-100 !text-gray-600'
+                }`}
+            >
+              <Filter size={14} />
+              {showFilters ? 'ซ่อนตัวกรอง' : 'แสดงตัวกรอง'}
+            </button>
+            <button
+              onClick={() => fetchData(pageKeys[currentPage])}
+              className="clay-button !px-4 !py-2 bg-gray-100 !text-gray-600 text-sm flex items-center gap-2"
+            >
+              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+              รีเฟรช
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* แผงตัวกรอง (Filters Panel) */}
-      {showFilters && (
+      {/* แผงตัวกรอง (Filters Panel) - Hide if controlled */}
+      {!isControlled && showFilters && (
         <div className="clay-card-inset mb-6 animate-slide-up">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
@@ -254,7 +265,7 @@ export default function DataTable() {
                   </td>
                   <td className="py-3 px-4">
                     <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-medium capitalize">
-                      {item.Room || item.room || 'ไม่ระบุ'}
+                      {item.Room || item.room || item.DeviceId || 'ไม่ระบุ'}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-gray-500 font-mono text-xs">
@@ -266,9 +277,11 @@ export default function DataTable() {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-semibold text-gray-800">
-                    {typeof item.SensorValue === 'number'
-                      ? item.SensorValue.toFixed(2)
-                      : item.SensorValue}
+                    {item.SensorType === 'light'
+                      ? (item.SensorValue === 1 ? 'ON' : 'OFF')
+                      : (typeof item.SensorValue === 'number'
+                        ? item.SensorValue.toFixed(2)
+                        : item.SensorValue)}
                   </td>
                 </tr>
               ))

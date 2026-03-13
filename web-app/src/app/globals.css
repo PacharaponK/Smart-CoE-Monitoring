@@ -63,6 +63,18 @@ body {
   .gradient-pink {
     background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
   }
+
+  .gradient-green {
+    background: linear-gradient(135deg, #22c55e 0%, #4ade80 100%);
+  }
+
+  .gradient-yellow {
+    background: linear-gradient(135deg, #eab308 0%, #facc15 100%);
+  }
+
+  .gradient-emerald {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  }
 }
 
 /* Custom scrollbar */

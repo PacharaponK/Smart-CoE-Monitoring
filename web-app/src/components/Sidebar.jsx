@@ -8,7 +8,7 @@ import {
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'devices', label: 'อุปกรณ์ (Devices)', icon: Radio },
+  { id: 'devices', label: 'อุปกรณ์', icon: Radio },
   { id: 'data', label: 'ข้อมูลย้อนหลัง', icon: Database },
   { id: 'alerts', label: 'การแจ้งเตือน', icon: Bell },
 ];
@@ -18,9 +18,7 @@ const bottomItems = [
   { id: 'settings', label: 'ตั้งค่า', icon: Settings },
 ];
 
-export default function Sidebar({ activeTab, onTabChange }) {
-  const [collapsed, setCollapsed] = useState(false);
-
+export default function Sidebar({ activeTab, onTabChange, collapsed, setCollapsed }) {
   return (
     <aside
       className={`fixed top-0 left-0 h-screen bg-white z-30 flex flex-col transition-all duration-300 ease-in-out ${collapsed ? 'w-[72px]' : 'w-64'
@@ -31,9 +29,11 @@ export default function Sidebar({ activeTab, onTabChange }) {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
-        <div className="gradient-blue w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0">
-          <Activity size={20} className="text-white" />
-        </div>
+        <img 
+          src="/images/coe-icon.jpg" 
+          alt="Smart CoE Logo" 
+          className="w-10 h-10 rounded-2xl flex-shrink-0 object-cover"
+        />
         {!collapsed && (
           <div className="overflow-hidden">
             <h1 className="text-sm font-bold text-gray-800 whitespace-nowrap">Smart CoE</h1>

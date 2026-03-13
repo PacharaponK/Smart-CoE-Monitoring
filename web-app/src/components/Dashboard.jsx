@@ -57,7 +57,7 @@ export default function Dashboard() {
   const roomOptions = useMemo(() => {
     const uniqueRooms = new Set(messages.map(m => m.DeviceId).filter(Boolean));
     // Core PSU CoE rooms
-    ['R200', 'R201', 'Co_Ai'].forEach(r => uniqueRooms.add(r));
+    ['R200', 'R201', 'R302', 'Co_Ai', 'AIE', 'NETWORK'].forEach(r => uniqueRooms.add(r));
     return [
       { label: 'ทุกห้อง (All Rooms)', value: '' },
       ...Array.from(uniqueRooms).sort().map(room => ({ label: room, value: room }))
@@ -68,13 +68,15 @@ export default function Dashboard() {
     <div className="space-y-6">
       <HeroSection />
 
-      <DashboardHeader 
-        selectedRoom={selectedRoom}
-        onRoomChange={setSelectedRoom}
-        roomOptions={roomOptions}
-        isConnected={isConnected}
-        onReconnect={reconnect}
-      />
+      <div className="relative z-50">
+        <DashboardHeader 
+          selectedRoom={selectedRoom}
+          onRoomChange={setSelectedRoom}
+          roomOptions={roomOptions}
+          isConnected={isConnected}
+          onReconnect={reconnect}
+        />
+      </div>
 
       <QuickStats 
         stats={stats} 

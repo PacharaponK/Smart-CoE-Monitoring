@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Area, AreaChart,
@@ -11,40 +11,52 @@ const COLORS = ['#3b82f6', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899'];
 const MAX_POINTS = 30;
 const CHART_TIMEOUT = 15000; // Consider data stale after 15 seconds
 
-export default function RealtimeChart({ title = 'Real-time Sensor Data', chartType = 'area' }) {
-  const { messages, isConnected } = useMqtt();
+export default function RealtimeChart({ 
+  title = 'Real-time Sensor Data', 
+  chartType = 'area', 
+  messages = [] 
+}) {
+  const { isConnected } = useMqtt();
   const [chartData, setChartData] = useState([]);
-  const [sensorTypes, setSensorTypes] = useState(new Set());
+  const [activeTypes, setActiveTypes] = useState([]);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const [isDataStale, setIsDataStale] = useState(false);
-  const dataRef = useRef([]);
 
+  // Process messages whenever they change
   useEffect(() => {
-    if (messages.length === 0) return;
-
-    const latest = messages[0];
-    if (!latest) return;
-
-    const timeLabel = new Date(latest.receivedAt).toLocaleTimeString('th-TH', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-
-    const newPoint = {
-      time: timeLabel,
-      [latest.SensorType || 'value']: latest.SensorValue ?? 0,
-      device: latest.DeviceId || 'unknown',
-      timestamp: latest.receivedAt,
-    };
-
-    if (latest.SensorType) {
-      setSensorTypes((prev) => new Set([...prev, latest.SensorType]));
+    if (!messages || messages.length === 0) {
+      if (chartData.length > 0) setChartData([]);
+      return;
     }
 
-    dataRef.current = [...dataRef.current, newPoint].slice(-MAX_POINTS);
-    setChartData([...dataRef.current]);
-    setLastUpdateTime(new Date(latest.receivedAt));
+    // console.log('[RealtimeChart] Processing messages:', messages.length);
+
+    const timeGroups = {};
+    const localSensorTypes = new Set();
+    
+    // Sort oldest to newest for Recharts
+    const sorted = [...messages].sort((a, b) => new Date(a.receivedAt) - new Date(b.receivedAt));
+    
+    sorted.forEach(msg => {
+      const timeLabel = new Date(msg.receivedAt).toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      
+      if (!timeGroups[timeLabel]) {
+        timeGroups[timeLabel] = { time: timeLabel };
+      }
+      
+      timeGroups[timeLabel][msg.SensorType || 'value'] = msg.SensorValue ?? 0;
+      if (msg.SensorType) localSensorTypes.add(msg.SensorType);
+    });
+
+    const newData = Object.values(timeGroups).slice(-MAX_POINTS);
+    
+    setChartData(newData);
+    setActiveTypes(Array.from(localSensorTypes));
+    setLastUpdateTime(new Date(messages[0].receivedAt));
     setIsDataStale(false);
   }, [messages]);
 
@@ -58,11 +70,9 @@ export default function RealtimeChart({ title = 'Real-time Sensor Data', chartTy
       setIsDataStale(timeSinceLastUpdate > CHART_TIMEOUT);
     };
 
-    const interval = setInterval(checkStaleData, 1000);
+    const interval = setInterval(checkStaleData, 2000);
     return () => clearInterval(interval);
   }, [lastUpdateTime]);
-
-  const activeTypes = Array.from(sensorTypes);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -72,8 +82,10 @@ export default function RealtimeChart({ title = 'Real-time Sensor Data', chartTy
         {payload.map((entry, i) => (
           <p key={i} style={{ color: entry.color }} className="flex justify-between gap-4">
             <span>{entry.name}:</span>
-            <span className="font-mono font-semibold">
-              {typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}
+            <span className="font-mono font-bold text-gray-900">
+              {entry.name === 'light' 
+                ? (entry.value === 1 ? 'ON' : 'OFF')
+                : (typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value)}
             </span>
           </p>
         ))}
@@ -123,7 +135,7 @@ export default function RealtimeChart({ title = 'Real-time Sensor Data', chartTy
               : 'Backend socket disconnected. Check backend server status.'}
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" key={activeTypes.join(',')}>
             <ChartComponent data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
               <defs>
                 {activeTypes.map((type, i) => (

@@ -41,9 +41,12 @@ const io = new Server(server, {
     origin: FRONTEND_ORIGIN,
     methods: ["GET", "POST"],
   },
+  transports: ["websocket"], // Force WebSocket only, no polling
 });
 
 let latestTelemetry = null;
+const telemetryBuffer = [];
+const MAX_BUFFER_SIZE = 200;
 let socketClientCount = 0;
 let iotConnected = false;
 
@@ -54,7 +57,12 @@ app.get("/health", (req, res) => {
     socketClientCount,
     topics: IOT_TOPICS,
     latestTelemetry,
+    bufferSize: telemetryBuffer.length,
   });
+});
+
+app.get("/api/realtime/history", (req, res) => {
+  res.json({ items: telemetryBuffer });
 });
 
 app.get("/api/realtime/latest", (req, res) => {
@@ -130,8 +138,10 @@ io.on("connection", (socket) => {
     userAgent: socket.handshake?.headers["user-agent"]?.substring(0, 50),
   });
 
-  if (latestTelemetry) {
-    console.log(`[Socket] Sending latest telemetry to ${socket.id}`);
+  if (telemetryBuffer.length > 0) {
+    console.log(`[Socket] Sending telemetry history (${telemetryBuffer.length} items) to ${socket.id}`);
+    socket.emit("telemetry-history", telemetryBuffer);
+  } else if (latestTelemetry) {
     socket.emit("telemetry", latestTelemetry);
   }
 
@@ -206,6 +216,12 @@ if (!IOT_ENDPOINT || !certPath || !keyPath || !caPath) {
         topic,
         receivedAt: new Date().toISOString(),
       };
+
+      // Update buffer
+      telemetryBuffer.unshift(latestTelemetry);
+      if (telemetryBuffer.length > MAX_BUFFER_SIZE) {
+        telemetryBuffer.pop();
+      }
 
       console.log(`[IoT] Normalized telemetry:`, normalized);
       console.log(

@@ -1,6 +1,9 @@
 'use client';
 
-import { Activity, Cpu, Thermometer, Wifi, AlertTriangle, CheckCircle } from 'lucide-react';
+import { 
+  Activity, Cpu, Thermometer, Wifi, AlertTriangle, CheckCircle, 
+  Volume2, Lightbulb, Droplets, Sun, Radio 
+} from 'lucide-react';
 
 const iconMap = {
   activity: Activity,
@@ -9,6 +12,11 @@ const iconMap = {
   wifi: Wifi,
   alert: AlertTriangle,
   check: CheckCircle,
+  'volume-2': Volume2,
+  lightbulb: Lightbulb,
+  droplets: Droplets,
+  sun: Sun,
+  radio: Radio,
 };
 
 const gradientMap = {
@@ -17,6 +25,9 @@ const gradientMap = {
   teal: 'gradient-teal',
   orange: 'gradient-orange',
   pink: 'gradient-pink',
+  green: 'gradient-green',
+  yellow: 'gradient-yellow',
+  emerald: 'gradient-emerald',
 };
 
 export default function StatCard({
