@@ -63,10 +63,9 @@ export default function MqttProvider({ children }) {
       socketRef.current.disconnect();
     }
 
-    console.log('[MQTT] Connecting via Pure WebSocket to:', backendUrl);
+    console.log('[MQTT] Connecting via Socket.io to:', backendUrl);
     const socket = io(backendUrl, {
-      transports: ['websocket'], // Force WebSocket only
-      upgrade: false,            // Skip HTTP polling upgrade phase
+      transports: ['polling', 'websocket'], // Allow fallback to polling
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
@@ -84,50 +83,64 @@ export default function MqttProvider({ children }) {
       console.warn('[MQTT] Socket disconnected. Reason:', reason);
     });
 
+    const getMessageKey = (msg) => `${msg.DeviceId}-${msg.Timestamp}-${msg.SensorType}`;
+
     socket.on('telemetry-history', (history) => {
       console.log(`[MQTT] Received history (${history.length} items)`);
       setMessages((prev) => {
-        // Merge history with existing messages, avoid duplicates based on Timestamp and DeviceId
-        const existingKeys = new Set(prev.map(m => `${m.DeviceId}-${m.Timestamp}`));
-        const newHistory = history.filter(m => !existingKeys.has(`${m.DeviceId}-${m.Timestamp}`));
-        const merged = [...prev, ...newHistory]
-          .sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt))
-          .slice(0, 200); // Increased buffer size
-        return merged;
-      });
-    });
-
-    socket.on('telemetry', (incoming) => {
-      // console.log('[MQTT] Received telemetry:', incoming);
-
-      const enriched = {
-        DeviceId: incoming?.DeviceId || incoming?.deviceId || 'unknown-device',
-        SensorType: incoming?.SensorType || incoming?.sensorType || 'unknown',
-        SensorValue: Number(incoming?.SensorValue ?? incoming?.sensorValue ?? incoming?.value ?? 0),
-        topic: incoming?.topic || '',
-        receivedAt: incoming?.receivedAt || new Date().toISOString(),
-        Timestamp: incoming?.Timestamp || new Date().toISOString(),
-        ...incoming,
-      };
-
-      setLatestMessage(enriched);
-      
-      // Update messages array - always create a new array reference
-      setMessages((prev) => {
-        const newMessages = [enriched, ...prev];
-        // Keep unique by Timestamp + DeviceId to avoid double messages from history + live
+        const combined = [...prev, ...history.map(item => ({
+          ...item,
+          DeviceId: item?.DeviceId || item?.deviceId || 'unknown-device',
+          SensorType: item?.SensorType || item?.sensorType || 'unknown',
+          SensorValue: Number(item?.SensorValue ?? item?.sensorValue ?? item?.value ?? 0),
+          Timestamp: item?.Timestamp || item?.receivedAt || new Date().toISOString(),
+        }))];
+        
         const unique = [];
         const seen = new Set();
         
-        for (const msg of newMessages) {
-          const key = `${msg.DeviceId}-${msg.Timestamp}-${msg.SensorType}`;
+        // Sort by receivedAt descending first so we keep the newest items if duplicates exist
+        combined.sort((a, b) => new Date(b.receivedAt || b.Timestamp) - new Date(a.receivedAt || a.Timestamp));
+
+        for (const msg of combined) {
+          const key = getMessageKey(msg);
           if (!seen.has(key)) {
             seen.add(key);
             unique.push(msg);
           }
         }
         
-        return unique.slice(0, 250); // Increased buffer
+        return unique.slice(0, 250);
+      });
+    });
+
+    socket.on('telemetry', (incoming) => {
+      const enriched = {
+        ...incoming,
+        DeviceId: incoming?.DeviceId || incoming?.deviceId || 'unknown-device',
+        SensorType: incoming?.SensorType || incoming?.sensorType || 'unknown',
+        SensorValue: Number(incoming?.SensorValue ?? incoming?.sensorValue ?? incoming?.value ?? 0),
+        topic: incoming?.topic || '',
+        receivedAt: incoming?.receivedAt || new Date().toISOString(),
+        Timestamp: incoming?.Timestamp || new Date().toISOString(),
+      };
+
+      setLatestMessage(enriched);
+      
+      setMessages((prev) => {
+        const newMessages = [enriched, ...prev];
+        const unique = [];
+        const seen = new Set();
+        
+        for (const msg of newMessages) {
+          const key = getMessageKey(msg);
+          if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(msg);
+          }
+        }
+        
+        return unique.slice(0, 250);
       });
 
       setDeviceData((prev) => ({

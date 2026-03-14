@@ -14,6 +14,9 @@ loadEnvironment();
 const PORT = Number(process.env.PORT || 4000);
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
 const ALLOWED_ORIGINS = FRONTEND_ORIGIN.split(",").map(o => o.trim());
+if (ALLOWED_ORIGINS.includes("http://localhost:3000") && !ALLOWED_ORIGINS.includes("http://127.0.0.1:3000")) {
+  ALLOWED_ORIGINS.push("http://127.0.0.1:3000");
+}
 
 const API_GATEWAY_URL =
   process.env.API_GATEWAY_URL ||
@@ -55,7 +58,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ["websocket"], 
+  transports: ["polling", "websocket"], 
 });
 
 let latestTelemetry = null;
@@ -85,42 +88,54 @@ app.get("/api/realtime/latest", (req, res) => {
 
 app.get("/api/sensor-data", async (req, res) => {
   try {
-    const { deviceId, sensorType, startTime, endTime } = req.query;
+    const { deviceId, sensorType, startTime, endTime, limit, room, lastKey } = req.query;
 
     // Build query parameters for API Gateway
     const params = {};
-    if (deviceId) params.deviceId = deviceId;
-    if (sensorType) params.sensorType = sensorType;
+    if (deviceId) {
+      params.deviceId = deviceId;
+      params.DeviceId = deviceId;
+    }
+    if (sensorType) {
+      params.sensorType = sensorType;
+      params.SensorType = sensorType;
+    }
     if (startTime) params.startTime = startTime;
     if (endTime) params.endTime = endTime;
+    if (limit) params.limit = limit;
+    if (room) {
+      params.room = room;
+      params.Room = room;
+    }
+    if (lastKey) params.lastKey = lastKey; // Pass the JSON string
 
     const apiUrl = `${API_GATEWAY_URL}/${API_ENDPOINT}`;
     console.log("[Backend] API Gateway URL:", apiUrl);
     console.log("[Backend] API Gateway params:", params);
     const response = await axios.get(apiUrl, { params });
     // Handle different response formats
-    let items, lastKey, count;
+    let items, responseLastKey, count;
 
     if (Array.isArray(response.data)) {
       // Direct array response
       items = response.data;
-      lastKey = null;
+      responseLastKey = null;
       count = response.data.length;
     } else if (response.data.items && Array.isArray(response.data.items)) {
       // Object with items array
       items = response.data.items;
-      lastKey = response.data.lastKey || null;
+      responseLastKey = response.data.lastKey || null;
       count = response.data.count || response.data.items.length;
     } else {
       // Single item or unexpected format
       items = response.data ? [response.data] : [];
-      lastKey = null;
+      responseLastKey = null;
       count = items.length;
     }
 
     res.json({
       items,
-      lastKey,
+      lastKey: responseLastKey,
       count,
     });
   } catch (error) {
@@ -198,7 +213,7 @@ if (!IOT_ENDPOINT || !certPath || !keyPath || !caPath) {
     keyPath,
     caPath,
     protocol: "mqtts",
-    reconnectPeriod: 0,
+    reconnectPeriod: 1000,
     keepalive: 60,
     debug: true,
   });

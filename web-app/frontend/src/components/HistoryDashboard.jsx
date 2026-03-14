@@ -27,16 +27,17 @@ export default function HistoryDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (deviceId) params.set('deviceId', deviceId);
-      if (sensorType) params.set('sensorType', sensorType);
-      if (room) params.set('room', room);
-      if (startTime) params.set('startTime', new Date(startTime).toISOString());
-      if (endTime) params.set('endTime', new Date(endTime).toISOString());
-      params.set('limit', String(limit));
-
       const baseUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
-      const res = await fetch(`${baseUrl}/api/sensor-data?${params.toString()}`);
+      const url = new URL(`${baseUrl}/api/sensor-data`);
+      
+      if (deviceId) url.searchParams.set('deviceId', deviceId);
+      if (sensorType) url.searchParams.set('sensorType', sensorType);
+      if (room) url.searchParams.set('room', room);
+      if (startTime) url.searchParams.set('startTime', new Date(startTime).toISOString());
+      if (endTime) url.searchParams.set('endTime', new Date(endTime).toISOString());
+      url.searchParams.set('limit', String(limit));
+
+      const res = await fetch(url.toString());
       if (!res.ok) throw new Error('Failed to fetch data');
 
       const result = await res.json();
@@ -59,7 +60,7 @@ export default function HistoryDashboard() {
     setRoom('');
     setStartTime('');
     setEndTime('');
-    fetchData();
+    // No need to call fetchData() manually, useEffect will trigger it because fetchData callback changes
   };
 
   const sensorTypeOptions = [

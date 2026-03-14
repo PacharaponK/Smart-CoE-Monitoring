@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, ChevronLeft, ChevronRight, Filter, Download, RefreshCw, Activity, MapPin } from 'lucide-react';
 import ClaySelect from './ClaySelect';
 
-export default function DataTable({ externalData = null, externalLoading = false }) {
+export default function DataTable({ externalData = null, externalLoading = false, initialRoom = '' }) {
   const isControlled = externalData !== null;
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
   const [internalData, setInternalData] = useState([]);
@@ -18,9 +18,18 @@ export default function DataTable({ externalData = null, externalLoading = false
   // Filters (only used if not controlled)
   const [deviceId, setDeviceId] = useState('');
   const [sensorType, setSensorType] = useState('');
-  const [room, setRoom] = useState('');
+  const [room, setRoom] = useState(initialRoom);
   const [limit] = useState(20);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Sync initialRoom prop to internal state if not controlled
+  useEffect(() => {
+    if (!isControlled && initialRoom !== undefined) {
+      setRoom(initialRoom);
+      setCurrentPage(0);
+      setPageKeys([null]);
+    }
+  }, [initialRoom, isControlled]);
 
   const data = isControlled ? externalData : internalData;
   const isLoading = isControlled ? externalLoading : loading;
@@ -36,17 +45,29 @@ export default function DataTable({ externalData = null, externalLoading = false
       if (room) params.set('room', room);
       params.set('limit', String(limit));
       if (exclusiveStartKey) {
-        params.set('lastKey', JSON.stringify(exclusiveStartKey));
+        params.set('lastKey', typeof exclusiveStartKey === 'string' ? exclusiveStartKey : JSON.stringify(exclusiveStartKey));
       }
 
       const baseUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
-      const res = await fetch(`${baseUrl}/api/sensor-data?${params.toString()}`);
+      const url = new URL(`${baseUrl}/api/sensor-data`);
+      
+      if (deviceId) url.searchParams.set('deviceId', deviceId);
+      if (sensorType) url.searchParams.set('sensorType', sensorType);
+      if (room) url.searchParams.set('room', room);
+      url.searchParams.set('limit', String(limit));
+      
+      if (exclusiveStartKey) {
+        const keyStr = typeof exclusiveStartKey === 'string' ? exclusiveStartKey : JSON.stringify(exclusiveStartKey);
+        url.searchParams.set('lastKey', keyStr);
+      }
+
+      const res = await fetch(url.toString());
       if (!res.ok) throw new Error('Failed to fetch data');
 
       const result = await res.json();
-      setInternalData(result.items);
+      setInternalData(result.items || []);
       setLastKey(result.lastKey);
-      setTotalCount(result.count);
+      setTotalCount(result.count || 0);
     } catch (err) {
       setError(err.message);
       setInternalData([]);
@@ -103,7 +124,10 @@ export default function DataTable({ externalData = null, externalLoading = false
     { label: 'ทุกห้อง (All Rooms)', value: '' },
     { label: 'R200', value: 'R200' },
     { label: 'R201', value: 'R201' },
+    { label: 'R302', value: 'R302' },
     { label: 'Co_Ai', value: 'Co_Ai' },
+    { label: 'AIE', value: 'AIE' },
+    { label: 'NETWORK', value: 'NETWORK' },
   ];
 
   const formatTimestamp = (ts) => {

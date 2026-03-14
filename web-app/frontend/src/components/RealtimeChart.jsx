@@ -38,6 +38,7 @@ export default function RealtimeChart({
     const sorted = [...messages].sort((a, b) => new Date(a.receivedAt) - new Date(b.receivedAt));
     
     sorted.forEach(msg => {
+      const type = msg.SensorType || 'value';
       const timeLabel = new Date(msg.receivedAt).toLocaleTimeString('th-TH', {
         hour: '2-digit',
         minute: '2-digit',
@@ -48,8 +49,8 @@ export default function RealtimeChart({
         timeGroups[timeLabel] = { time: timeLabel };
       }
       
-      timeGroups[timeLabel][msg.SensorType || 'value'] = msg.SensorValue ?? 0;
-      if (msg.SensorType) localSensorTypes.add(msg.SensorType);
+      timeGroups[timeLabel][type] = msg.SensorValue ?? 0;
+      localSensorTypes.add(type);
     });
 
     const newData = Object.values(timeGroups).slice(-MAX_POINTS);
@@ -96,7 +97,7 @@ export default function RealtimeChart({
   const ChartComponent = chartType === 'line' ? LineChart : AreaChart;
 
   return (
-    <div className="clay-card animate-fade-in">
+    <div className="animate-fade-in w-full">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-bold text-gray-700">{title}</h3>

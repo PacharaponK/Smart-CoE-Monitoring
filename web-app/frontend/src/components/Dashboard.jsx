@@ -18,7 +18,7 @@ export default function Dashboard() {
   // Memoized filtered messages based on room selection
   const filteredMessages = useMemo(() => {
     if (!selectedRoom) return messages;
-    return messages.filter(m => m.DeviceId === selectedRoom);
+    return messages.filter(m => (m.Room || m.room || m.DeviceId) === selectedRoom);
   }, [messages, selectedRoom]);
 
   // Memoized stats calculation
@@ -46,7 +46,8 @@ export default function Dashboard() {
     if (!selectedRoom) return deviceData;
     const filtered = {};
     Object.entries(deviceData).forEach(([id, data]) => {
-      if (id === selectedRoom) {
+      const room = data.Room || data.room || data.DeviceId;
+      if (room === selectedRoom || id === selectedRoom) {
         filtered[id] = data;
       }
     });
@@ -55,7 +56,7 @@ export default function Dashboard() {
 
   // Dynamic room options discovery
   const roomOptions = useMemo(() => {
-    const uniqueRooms = new Set(messages.map(m => m.DeviceId).filter(Boolean));
+    const uniqueRooms = new Set(messages.map(m => m.Room || m.room || m.DeviceId).filter(Boolean));
     // Core PSU CoE rooms
     ['R200', 'R201', 'R302', 'Co_Ai', 'AIE', 'NETWORK'].forEach(r => uniqueRooms.add(r));
     return [
@@ -86,6 +87,7 @@ export default function Dashboard() {
       <AnalyticsRow 
         filteredMessages={filteredMessages} 
         stats={stats} 
+        selectedRoom={selectedRoom}
       />
 
       <NodeStatus 
@@ -93,7 +95,7 @@ export default function Dashboard() {
         selectedRoom={selectedRoom} 
       />
 
-      <DataTable />
+      <DataTable initialRoom={selectedRoom} />
     </div>
   );
 }

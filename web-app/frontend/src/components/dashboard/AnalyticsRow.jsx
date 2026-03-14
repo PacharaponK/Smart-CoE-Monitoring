@@ -1,33 +1,75 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Activity, Gauge } from 'lucide-react';
 import RealtimeChart from '../RealtimeChart';
 import SensorGauge from '../SensorGauge';
 
-export default function AnalyticsRow({ filteredMessages, stats }) {
+export default function AnalyticsRow({ filteredMessages, stats, selectedRoom }) {
+  // Group messages by room
+  const messagesByRoom = useMemo(() => {
+    const groups = {};
+    filteredMessages.forEach(msg => {
+      const room = msg.Room || msg.room || msg.DeviceId || 'Unknown';
+      if (!groups[room]) groups[room] = [];
+      groups[room].push(msg);
+    });
+    return groups;
+  }, [filteredMessages]);
+
+  const roomList = Object.keys(messagesByRoom).sort();
+
   return (
     <div className="flex flex-col gap-6">
-      {/* กราฟ Real-time Chart - Full Width */}
+      {/* กราฟ Real-time Chart Section */}
       <div className="w-full space-y-4">
-        <div className="clay-card !p-0 overflow-hidden group">
-          <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-white/60 backdrop-blur-sm">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-50/50 rounded-2xl text-blue-600 shadow-inner">
-                <Activity size={20} className="animate-pulse-slow" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-800 tracking-tight">กราฟติดตามข้อมูลแบบสด</h3>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest -mt-0.5">Live Telemetry Stream</p>
-              </div>
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+              <Activity size={18} />
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100/50 shadow-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-wider">Connected</span>
+            <div>
+              <h3 className="font-bold text-gray-800">กราฟติดตามข้อมูลแบบสด</h3>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Live Telemetry Stream</p>
             </div>
           </div>
-          <div className="p-4">
-            <RealtimeChart title="" chartType="area" messages={filteredMessages} />
-          </div>
+          {selectedRoom === '' && (
+            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+              แสดงข้อมูล {roomList.length} ห้อง
+            </span>
+          )}
+        </div>
+
+        <div className="clay-card !p-0 overflow-hidden">
+          {roomList.length === 0 ? (
+            <div className="p-12 text-center text-gray-400">
+              ไม่พบข้อมูลเซ็นเซอร์ในขณะนี้
+            </div>
+          ) : (
+            <div className={`grid grid-cols-1 ${selectedRoom === '' && roomList.length > 1 ? 'lg:grid-cols-2 lg:divide-x lg:divide-gray-50' : ''} divide-y divide-gray-50`}>
+              {roomList.map(room => (
+                <div key={room} className="flex flex-col group">
+                  <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-white/40">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                      <h4 className="font-bold text-gray-700">Room: {room}</h4>
+                    </div>
+                    <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100/50">
+                      <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[9px] font-bold uppercase">Live</span>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <RealtimeChart 
+                      title="" 
+                      chartType="area" 
+                      messages={messagesByRoom[room]} 
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
