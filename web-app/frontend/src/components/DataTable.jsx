@@ -6,7 +6,7 @@ import ClaySelect from './ClaySelect';
 
 export default function DataTable({ externalData = null, externalLoading = false, initialRoom = '' }) {
   const isControlled = externalData !== null;
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
   const [internalData, setInternalData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -56,8 +56,9 @@ export default function DataTable({ externalData = null, externalLoading = false
     setLoading(true);
     setError(null);
     try {
-      const baseUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
-      const url = new URL(`${baseUrl}/api/sensor-data`);
+      // Create the URL object. If backendUrl is empty, use the current window origin as base.
+      const baseUrl = backendUrl ? (backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl) : '';
+      const url = new URL(`${baseUrl}/api/sensor-data`, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
       
       if (deviceId) url.searchParams.set('deviceId', deviceId);
       if (sensorType) url.searchParams.set('sensorType', sensorType);
