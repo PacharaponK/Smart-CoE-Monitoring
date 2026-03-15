@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ทดสอบ Cognito + AWS IoT (Pool ใหม่)</title>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1289.0.min.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f3f4f6; display: flex; justify-content: center; padding-top: 50px; }
+        .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        h2 { margin-top: 0; color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+        .log-box { background: #1f2937; color: #10b981; font-family: monospace; padding: 15px; border-radius: 8px; height: 350px; overflow-y: auto; font-size: 14px; margin-top: 20px; line-height: 1.5; }
+        .log-entry { margin-bottom: 5px; word-break: break-all; }
+        .error { color: #ef4444; }
+        .info { color: #60a5fa; }
+        .warning { color: #f59e0b; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>🛠️ Cognito Connection Test (Pool ใหม่)</h2>
+        <div id="status" style="font-weight: bold; color: #f59e0b;">กำลังเริ่มต้นการทดสอบ...</div>
+        
+        <div class="log-box" id="logBox"></div>
+    </div>
+
+    <script>
+        // 🔴 ข้อมูล Endpoint และ Pool ID (ตัวใหม่ของคุณ)
+        const IOT_ENDPOINT = "a2bgtu4hk9hwe6-ats.iot.ap-southeast-1.amazonaws.com";
+        const IDENTITY_POOL_ID = "ap-southeast-1:46e389b2-a6a0-410d-85e5-4113d69b6c76"; // เปลี่ยนเป็น Pool ใหม่แล้ว
+        const REGION = "ap-southeast-1"; 
+        const TOPIC = "gateway/+/telemetry/aggregated"; 
+
+        function addLog(message, type = 'normal') {
+            const logBox = document.getElementById('logBox');
+            let color = type === 'error' ? 'color: #ef4444;' : type === 'info' ? 'color: #60a5fa;' : type === 'warning' ? 'color: #f59e0b;' : 'color: #10b981;';
+            logBox.innerHTML += `<div class="log-entry" style="${color}">> ${message}</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function setStatus(text, color) {
+            const statusEl = document.getElementById('status');
+            statusEl.innerText = text;
+            statusEl.style.color = color;
+        }
+
+        addLog("1. กำลังร้องขอ Credential จาก Cognito Pool ใหม่...", "info");
+
+        AWS.config.region = REGION;
+        AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+            IdentityPoolId: IDENTITY_POOL_ID
+        });
+
+        AWS.config.credentials.get(function(err) {
+            if (err) {
+                addLog(`❌ Cognito Error: ${err.message}`, "error");
+                setStatus("❌ ขอสิทธิ์ Cognito ไม่สำเร็จ", "#ef4444");
+                return;
+            }
+
+            if (!AWS.config.credentials.accessKeyId) {
+                addLog("❌ ไม่ได้รับ Access Key จาก Cognito กรุณาเช็ค Role", "error");
+                return;
+            }
+
+            addLog("✅ ได้รับ Credential ชั่วคราวแล้ว", "normal");
+            addLog(`Identity ID: ${AWS.config.credentials.identityId}`, "info");
+            addLog("2. กำลังสร้างลายเซ็น (SigV4) สำหรับ WebSocket...", "info");
+
+            const requestUrl = SigV4Utils.getSignedUrl(
+                IOT_ENDPOINT, 
+                REGION, 
+                AWS.config.credentials.accessKeyId, 
+                AWS.config.credentials.secretAccessKey, 
+                AWS.config.credentials.sessionToken
+            );
+
+            addLog("✅ สร้าง Signed URL สำเร็จ", "normal");
+            addLog("3. กำลังเชื่อมต่อเข้า AWS IoT Core...", "info");
+            
+            connectMQTT(requestUrl);
+        });
+
+        function connectMQTT(url) {
+            const randomClientId = 'web-test-' + Math.random().toString(16).substring(2, 10);
+            addLog(`ใช้ ClientId: ${randomClientId}`, "info");
+
+            const client = mqtt.connect(url, {
+                clientId: randomClientId,
+                protocolVersion: 4, 
+                reconnectPeriod: 5000 
+            });
+
+            client.on('connect', function () {
+                setStatus("🟢 เชื่อมต่อ AWS IoT สำเร็จ!", "#10b981");
+                addLog("✅ เชื่อมต่อ WebSocket สำเร็จ!", "normal");
+                
+                addLog(`4. กำลัง Subscribe Topic: ${TOPIC}`, "info");
+                client.subscribe(TOPIC, function(err) {
+                    if (!err) {
+                        addLog(`✅ Subscribe สำเร็จ รอรับข้อมูล...`, "normal");
+                    } else {
+                        addLog(`❌ Subscribe พลาด: ${JSON.stringify(err)}`, "error");
+                    }
+                });
+            });
+
+            client.on('message', function (topic, message) {
+                addLog(`📩 ข้อความเข้า [${topic}]: ${message.toString()}`, "normal");
+            });
+
+            client.on('error', function (err) {
+                setStatus("❌ เกิดข้อผิดพลาด", "#ef4444");
+                console.error("MQTT Raw Error:", err);
+                let errMsg = err ? (err.message || JSON.stringify(err)) : 'Unknown';
+                addLog(`❌ MQTT Error: ${errMsg}`, "error");
+            });
+
+            client.on('close', function () {
+                setStatus("⚠️ การเชื่อมต่อถูกปิด", "#f59e0b");
+                addLog("⚠️ โดนตัดการเชื่อมต่อ (Close Event)", "warning");
+                
+                addLog("💡 ข้อควรระวังสำหรับ Pool ใหม่:", "info");
+                addLog("อย่าลืมเข้าไปที่ IAM แล้วเอา Policy 'AWSIoTDataAccess' ไปแปะให้ Unauthenticated Role ของ Pool นี้ด้วยนะครับ!", "error");
+            });
+
+            client.on('offline', function () {
+                addLog("🔴 สถานะ: ออฟไลน์", "error");
+            });
+        }
+
+        // -------------------------------------------------------------
+        // อัลกอริทึมสำหรับเซ็นลายเซ็นอิเล็กทรอนิกส์ (AWS SigV4)
+        // -------------------------------------------------------------
+        const SigV4Utils = {
+            getSignedUrl: function(host, region, accessKey, secretKey, sessionToken) {
+                const date = new Date();
+                const dateStr = date.toISOString().replace(/[:\-]|\.\d{3}/g, '');
+                const dateStamp = dateStr.substr(0, 8);
+                const amzdate = dateStr;
+                const algorithm = 'AWS4-HMAC-SHA256';
+                const method = 'GET';
+                const canonicalUri = '/mqtt';
+                const service = 'iotdevicegateway';
+
+                let credentialScope = dateStamp + '/' + region + '/' + service + '/aws4_request';
+                let canonicalQuerystring = 'X-Amz-Algorithm=' + algorithm + '&X-Amz-Credential=' + encodeURIComponent(accessKey + '/' + credentialScope) + '&X-Amz-Date=' + amzdate + '&X-Amz-Expires=86400&X-Amz-SignedHeaders=host';
+                if (sessionToken) canonicalQuerystring += '&X-Amz-Security-Token=' + encodeURIComponent(sessionToken);
+
+                const canonicalHeaders = 'host:' + host + '\n';
+                const signedHeaders = 'host';
+                const payloadHash = CryptoJS.SHA256('').toString(CryptoJS.enc.Hex);
+                const canonicalRequest = method + '\n' + canonicalUri + '\n' + canonicalQuerystring + '\n' + canonicalHeaders + '\n' + signedHeaders + '\n' + payloadHash;
+
+                const stringToSign = algorithm + '\n' + amzdate + '\n' + credentialScope + '\n' + CryptoJS.SHA256(canonicalRequest).toString(CryptoJS.enc.Hex);
+                const signingKey = this.getSignatureKey(secretKey, dateStamp, region, service);
+                const signature = CryptoJS.HmacSHA256(stringToSign, signingKey).toString(CryptoJS.enc.Hex);
+
+                return 'wss://' + host + canonicalUri + '?' + canonicalQuerystring + '&X-Amz-Signature=' + signature;
+            },
+            getSignatureKey: function(key, dateStamp, regionName, serviceName) {
+                const kDate = CryptoJS.HmacSHA256(dateStamp, "AWS4" + key);
+                const kRegion = CryptoJS.HmacSHA256(regionName, kDate);
+                const kService = CryptoJS.HmacSHA256(serviceName, kRegion);
+                return CryptoJS.HmacSHA256("aws4_request", kService);
+            }
+        };
+    </script>
+</body>
+</html>
