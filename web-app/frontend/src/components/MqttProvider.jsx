@@ -56,14 +56,16 @@ export default function MqttProvider({ children }) {
   }, [messages]);
 
   const connectMqtt = useCallback(() => {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+    // Smart default: use localhost:4000 in dev, relative in production
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+      (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : '');
 
     if (socketRef.current) {
       console.log('[MQTT] Disconnecting existing socket...');
       socketRef.current.disconnect();
     }
 
-    console.log('[MQTT] Connecting via Socket.io to:', backendUrl);
+    console.log('[MQTT] Connecting via Socket.io to:', backendUrl || '(same origin)');
     const socket = io(backendUrl, {
       transports: ['polling', 'websocket'], // Allow fallback to polling
       reconnection: true,
