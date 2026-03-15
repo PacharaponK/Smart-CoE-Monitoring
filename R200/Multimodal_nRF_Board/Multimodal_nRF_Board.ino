@@ -101,7 +101,7 @@ void loop() {
         // --- 📡 โหมดปกติ (อ่านเซนเซอร์จริง) ---
         myData.temp = dht.readTemperature(); 
         myData.hum = dht.readHumidity();
-        myData.rawLight = digitalRead(LDR_PIN); 
+        myData.rawLight = !digitalRead(LDR_PIN); // แสง Digital (1=มีแสง, 0=มืดไม่มีไฟ)
 
         unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
         while (millis() - start < 50) {
