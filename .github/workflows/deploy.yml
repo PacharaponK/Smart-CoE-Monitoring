@@ -19,15 +19,21 @@ jobs:
           key: ${{ secrets.AWS_EC2_SSH_KEY }}
           port: 22
           script: |
-            # Navigate to project directory
-            cd ~/smart-coe-monitoring || git clone https://github.com/${{ github.repository }}.git ~/smart-coe-monitoring && cd ~/smart-coe-monitoring
-            
-            # Pull latest changes
-            git fetch origin main
-            git reset --hard origin/main
+            set -e
+            # Navigate to project directory or clone if it doesn't exist
+            if [ -d "~/smart-coe-monitoring/.git" ]; then
+              cd ~/smart-coe-monitoring
+              git pull origin main
+            else
+              git clone https://github.com/${{ github.repository }}.git ~/smart-coe-monitoring
+              cd ~/smart-coe-monitoring
+            fi
             
             # Move to web-app directory
             cd web-app
+            
+            # Clean old build artifacts to ensure a fresh build
+            rm -rf frontend/.next
             
             # Install all dependencies (frontend + backend)
             npm run install:all
@@ -36,7 +42,9 @@ jobs:
             npm run build:frontend
             
             # Restart or start the application using PM2
-            pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
+            # We use 'delete' first to ensure we don't have port conflicts from differently named old processes
+            pm2 delete coe-frontend coe-backend || true
+            pm2 start ecosystem.config.js
             
             # Save PM2 state
             pm2 save
