@@ -2,12 +2,13 @@
 
 import {
   LayoutDashboard, Database, Settings, ChevronLeft, ChevronRight,
-  Radio, Activity, Bell, HelpCircle, Image as ImageIcon
+  Radio, Activity, Bell, HelpCircle, Image as ImageIcon, Zap
 } from 'lucide-react';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'data', label: 'ข้อมูลย้อนหลัง', icon: Database },
+  { id: 'energy-cost', label: 'พลังงานและค่าไฟ', icon: Zap },
   { id: 'images', label: 'รูปภาพห้องเรียน', icon: ImageIcon },
   { id: 'alerts', label: 'การแจ้งเตือน', icon: Bell },
 ];
