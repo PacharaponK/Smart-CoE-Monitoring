@@ -14,7 +14,7 @@
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); 
 RF24 radio(CE_PIN, CSN_PIN);
-const byte address[6] = "1Node"; // ท่อของ R201
+const byte address[6] = "1Node"; // ท่อของ R200
 DHT dht(DHTPIN, DHT11); 
 
 typedef struct struct_message {
@@ -40,18 +40,19 @@ void setup() {
     Serial.begin(115200);
     
     lcd.init(); lcd.backlight();
-    lcd.setCursor(0, 0); lcd.print("Room: R201");
+    lcd.setCursor(0, 0); lcd.print("Room: R200");
     lcd.setCursor(0, 1); lcd.print("Booting...");
     
     pinMode(BUZZER_PIN, OUTPUT); digitalWrite(BUZZER_PIN, LOW); 
     dht.begin(); 
     pinMode(LDR_PIN, INPUT); 
-    
     if (radio.begin()) {
         radio.enableAckPayload(); 
         radio.enableDynamicPayloads(); 
+        radio.setPALevel(RF24_PA_HIGH); // 🌟 ลดจาก MAX เป็น HIGH ลดปัญหาไฟตกตอนดึงกระแสส่ง
+        radio.setDataRate(RF24_250KBPS); 
+        radio.setChannel(115); // 🌟 เปลี่ยนไปใช้ช่อง 115 ให้พ้นสัญญาณรบกวนของ WiFi 2.4GHz
         radio.openWritingPipe(address); 
-        radio.setPALevel(RF24_PA_LOW); 
         radio.stopListening();
     } else {
         lcd.clear(); 
@@ -61,7 +62,7 @@ void setup() {
 }
 
 void loop() {
-    strcpy(myData.room, "R201"); 
+    strcpy(myData.room, "R200"); 
 
     // 🌟 เลือกว่าจะอ่านค่าจริง หรือสร้างค่าจำลอง
     if (isMocking) {
