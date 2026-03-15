@@ -12,6 +12,7 @@ import SettingsTab from "@/components/tabs/SettingsTab";
 import HelpTab from "@/components/tabs/HelpTab";
 import HistoryTab from "@/components/tabs/HistoryTab";
 import ImagesTab from "@/components/tabs/ImagesTab";
+import EnergyCostTab from "@/components/tabs/EnergyCostTab";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -37,6 +38,7 @@ export default function Home() {
             {activeTab === "dashboard" && <Dashboard />}
             {activeTab === "devices" && <DevicesTab />}
             {activeTab === "data" && <HistoryTab />}
+            {activeTab === "energy-cost" && <EnergyCostTab />}
             {activeTab === "images" && <ImagesTab />}
             {activeTab === "alerts" && <AlertsTab />}
             {activeTab === "settings" && <SettingsTab />}
