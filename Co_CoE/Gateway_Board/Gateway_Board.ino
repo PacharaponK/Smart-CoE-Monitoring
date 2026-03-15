@@ -103,6 +103,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
 }
 
+String createJsonPayload(float value, bool isAlert, String reason) {
+    return "{\"value\":" + String(value) + ",\"isAlert\":{\"value\":" + String(isAlert ? 1 : 0) + ",\"reason\":\"" + reason + "\"}}";
+}
+
 void publishToMQTT(struct_message data) {
     String roomName = String(data.room); roomName.trim(); 
     if (roomName != "Co_Ai" && roomName != "R200" && roomName != "R201") {
@@ -117,19 +121,22 @@ void publishToMQTT(struct_message data) {
     String baseTopic = String(mqtt_topic_prefix) + "/" + roomName + "/";
     Serial.println("📡 [MQTT] กำลังส่งข้อมูล...");
 
-    String jsonTemp = "{\"value\": " + String(data.temp) + "}";
+    bool tempAlert = (data.temp > th_temp_R200);
+    String jsonTemp = createJsonPayload(data.temp, tempAlert, tempAlert ? "Temperature exceeds threshold" : "");
     client.publish((baseTopic + "temperature").c_str(), jsonTemp.c_str());
     Serial.println("   -> " + baseTopic + "temperature: " + jsonTemp);
 
-    String jsonHum = "{\"value\": " + String(data.hum) + "}";
+    bool humAlert = (data.hum > th_hum_R200);
+    String jsonHum = createJsonPayload(data.hum, humAlert, humAlert ? "Humidity exceeds threshold" : "");
     client.publish((baseTopic + "humidity").c_str(), jsonHum.c_str());
     Serial.println("   -> " + baseTopic + "humidity: " + jsonHum);
 
-    String jsonLight = "{\"value\": " + String(data.rawLight) + "}";
+    String jsonLight = createJsonPayload(data.rawLight, false, "");
     client.publish((baseTopic + "light").c_str(), jsonLight.c_str()); 
     Serial.println("   -> " + baseTopic + "light: " + jsonLight);
 
-    String jsonSound = "{\"value\": " + String(data.rawSound) + "}";
+    bool soundAlert = (data.rawSound > th_snd_R200);
+    String jsonSound = createJsonPayload(data.rawSound, soundAlert, soundAlert ? "Sound exceeds threshold" : "");
     client.publish((baseTopic + "sound").c_str(), jsonSound.c_str());
     Serial.println("   -> " + baseTopic + "sound: " + jsonSound);
     

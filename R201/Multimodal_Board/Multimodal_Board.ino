@@ -108,12 +108,13 @@ void loop() {
         // ถ้าค่า analog เข้าใกล้ 4095 แปลว่ามืด, ใกล้ 0 แปลว่าสว่าง
         myData.rawLight = (analogRead(LDR_PIN) < 2000) ? 1 : 0; 
 
-        unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
-        while (millis() - start < 50) {
-            int s = analogRead(SOUND_PIN);
-            if (s < 4095) { if (s > sMax) sMax = s; if (s < sMin) sMin = s; }
-        }
-        myData.rawSound = sMax - sMin;
+        // unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
+        // while (millis() - start < 50) {
+        //     int s = analogRead(SOUND_PIN);
+        //     if (s < 4095) { if (s > sMax) sMax = s; if (s < sMin) sMin = s; }
+        // }
+        // myData.rawSound = sMax - sMin;
+        myData.rawSound = 0; // เซ็นเซอร์เสีย ปิดการอ่านค่าชั่วคราว
     }
 
     esp_now_send(gatewayAddress, (uint8_t *) &myData, sizeof(myData));
