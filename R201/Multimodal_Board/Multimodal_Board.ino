@@ -7,7 +7,7 @@
 
 #define DHTPIN 4
 #define LDR_PIN 36
-#define SOUND_PIN 39
+#define SOUND_PIN 32
 #define BUZZER_PIN 15 
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); 
@@ -105,7 +105,8 @@ void loop() {
     } else {
         // --- 📡 โหมดปกติ (อ่านเซนเซอร์จริง) ---
         myData.temp = dht.readTemperature(); myData.hum = dht.readHumidity();
-        myData.rawLight = digitalRead(LDR_PIN); // แสง Digital (0/1)
+        // ถ้าค่า analog เข้าใกล้ 4095 แปลว่ามืด, ใกล้ 0 แปลว่าสว่าง
+        myData.rawLight = (analogRead(LDR_PIN) < 2000) ? 1 : 0; 
 
         unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
         while (millis() - start < 50) {

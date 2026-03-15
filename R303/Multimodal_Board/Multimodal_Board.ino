@@ -63,7 +63,7 @@ void loop() {
     strcpy(myData.room, "R303"); 
     myData.temp = dht.readTemperature(); 
     myData.hum = dht.readHumidity();
-    myData.rawLight = digitalRead(LDR_PIN); 
+    myData.rawLight = !digitalRead(LDR_PIN); 
 
     unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
     while (millis() - start < 50) {
