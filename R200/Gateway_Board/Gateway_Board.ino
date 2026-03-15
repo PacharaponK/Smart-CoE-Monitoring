@@ -1,10 +1,8 @@
-#include <esp_now.h>
 #include <WiFi.h>
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <math.h>
-#include <esp_wifi.h>
 #include <PubSubClient.h>
 
 const char* ssid = "PSU WiFi (802.1x)"; 
@@ -19,184 +17,124 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 RF24 radio(4, 5); 
-const byte addrR201[6] = "1Node"; 
-const byte addrCoAi[6] = "2Node"; 
+const byte addrR201[6] = "1Node"; // ท่อของ R201
 
-typedef struct struct_cmd {
-    char room[10]; bool ledState;
-} __attribute__((packed)) struct_cmd;
-
-typedef struct struct_message {
-    char room[10]; float temp; float hum; int rawLight; int rawSound;
-} __attribute__((packed)) struct_message;
+// 🌟 อัปเดต Struct ให้ตรงกับฝั่ง R201 เป๊ะๆ
+typedef struct struct_cmd { char room[10]; bool ledState; bool mockState; } __attribute__((packed)) struct_cmd;
+typedef struct struct_message { char room[10]; float temp; float hum; int rawLight; int rawSound; } __attribute__((packed)) struct_message;
 
 struct_message incomingData;
 unsigned long lastMqttReconnectAttempt = 0;
 
-bool led_R200 = false;
-bool led_R201 = false;
-bool led_CoAi = false;
-uint8_t broadcastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; 
+float th_temp_R201 = 40.0, th_hum_R201 = 80.0, th_snd_R201 = 90.0;
+float val_temp_R201 = 0, val_hum_R201 = 0, val_snd_R201 = 0;
+bool led_R201 = false; 
+bool mock_R201 = false; // 🌟 ตัวแปรเก็บสถานะ Mock ฝั่ง Gateway
 
-// 🌟 ฟังก์ชันรับค่าจาก MQTT (ศูนย์กลางการตัดสินใจ)
+bool checkThresholds() {
+    return (val_temp_R201 > th_temp_R201 || val_hum_R201 > th_hum_R201 || val_snd_R201 > th_snd_R201);
+}
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-    String msg = "";
-    for (int i = 0; i < length; i++) msg += (char)payload[i];
-    
-    Serial.printf("\n📩 [MQTT] ได้รับคำสั่ง Topic: %s | ข้อความ: %s\n", topic, msg.c_str());
-
+    String msg = ""; for (int i = 0; i < length; i++) msg += (char)payload[i];
     String topicStr = String(topic);
-    if (topicStr.startsWith("threshold/")) {
-        int colonIndex = msg.indexOf(':');
-        int braceIndex = msg.indexOf('}');
-        if (colonIndex != -1 && braceIndex != -1) {
-            float val = msg.substring(colonIndex + 1, braceIndex).toFloat();
-            bool turnOn = false;
-            
-            // 🌟 เช็คเงื่อนไข (อุณหภูมิ > 40, ชื้น > 80, เสียง > 90) *เอาแสงออกแล้ว*
-            if (topicStr.indexOf("temperature") != -1 && val > 40.0) turnOn = true;
-            else if (topicStr.indexOf("humidity") != -1 && val > 80.0) turnOn = true;
-            else if (topicStr.indexOf("sound") != -1 && val > 90.0) turnOn = true;
+    
+    // ล้างขยะ JSON กันเหนียว
+    msg.replace(" ", ""); msg.replace("\n", ""); msg.replace("\r", ""); msg.replace("\t", ""); 
 
-            Serial.printf("🔍 [System] เช็คเงื่อนไข: ค่า = %.2f -> สั่งเตือน = %s\n", val, turnOn ? "ON" : "OFF");
-
-            struct_cmd cmd;
-            cmd.ledState = turnOn;
-
-            // 🌟 กระจายคำสั่งไปให้บอร์ดลูกตามห้อง
-            if (topicStr.indexOf("R200") != -1) {
-                led_R200 = turnOn;
-                strcpy(cmd.room, "R200");
-                esp_now_send(broadcastMac, (uint8_t *) &cmd, sizeof(cmd)); 
-                Serial.printf("🎯 [สั่งการ] ส่งคำสั่ง ESP-NOW ไป R200: %s\n", turnOn ? "ON" : "OFF");
-            } 
-            else if (topicStr.indexOf("R201") != -1) {
-                led_R201 = turnOn;
-                Serial.printf("🎯 [สั่งการ] โหลดคำสั่งรอรอบส่ง ACK ให้ R201: %s\n", turnOn ? "ON" : "OFF");
-            } 
-            else if (topicStr.indexOf("Co_Ai") != -1) {
-                led_CoAi = turnOn;
-                Serial.printf("🎯 [สั่งการ] โหลดคำสั่งรอรอบส่ง ACK ให้ Co_Ai: %s\n", turnOn ? "ON" : "OFF");
-            }
+    // 🌟 ดักจับคำสั่งจำลองค่า
+    if (topicStr == "sim/R201/mock") {
+        if (msg == "1" || msg.indexOf("\"value\":1") != -1) {
+            mock_R201 = true;
+            Serial.println("🎭 [MQTT] เปิดโหมดจำลองเซนเซอร์ห้อง R201!");
+        } else {
+            mock_R201 = false;
+            Serial.println("🌡️ [MQTT] ปิดโหมดจำลอง กลับไปใช้เซนเซอร์จริง!");
         }
+        return;
+    }
+    
+    // ดักจับคำสั่งเปลี่ยนเกณฑ์ Threshold
+    if (topicStr.startsWith("threshold/R201")) {
+        float val = 0;
+        if (msg.indexOf(':') != -1 && msg.indexOf('}') != -1) {
+            val = msg.substring(msg.indexOf(':') + 1, msg.indexOf('}')).toFloat();
+        } else {
+            val = msg.toFloat(); 
+        }
+
+        if (topicStr.indexOf("temperature") != -1) th_temp_R201 = val;
+        else if (topicStr.indexOf("humidity") != -1) th_hum_R201 = val;
+        else if (topicStr.indexOf("sound") != -1) th_snd_R201 = val;
+        
+        led_R201 = checkThresholds(); 
     }
 }
 
 void publishToMQTT(struct_message data) {
     String roomName = String(data.room); roomName.trim(); 
-    if (roomName != "R200" && roomName != "R201" && roomName != "Co_Ai") return; 
-
-    if (!client.connected()) {
-        Serial.println("⚠️ [MQTT] ไม่ได้เชื่อมต่อ ไม่สามารถส่งข้อมูลได้!");
-        return;
-    }
-
-    String baseTopic = String(mqtt_topic_prefix) + "/" + roomName + "/";
+    if (roomName != "R201") return; 
+    if (!client.connected()) return;
     
-    // คำนวณเสียงเป็นเดซิเบล (dB) และส่งค่าจริงขึ้นไป
-    float db = (data.rawSound <= 0) ? 30.0 : (20.0 * log10(data.rawSound)) + 35.0; 
-
+    String baseTopic = String(mqtt_topic_prefix) + "/" + roomName + "/";
     client.publish((baseTopic + "temperature").c_str(), ("{\"value\": " + String(data.temp) + "}").c_str());
     client.publish((baseTopic + "humidity").c_str(), ("{\"value\": " + String(data.hum) + "}").c_str());
     client.publish((baseTopic + "light").c_str(), ("{\"value\": " + String(data.rawLight) + "}").c_str()); 
-    client.publish((baseTopic + "sound").c_str(), ("{\"value\": " + String(db) + "}").c_str());
-
-    Serial.printf("✅ [MQTT ส่งแล้ว] ห้อง %s -> อุณหภูมิ:%.1f, ชื้น:%.1f, แสง:%d, เสียง:%.1fdB\n", roomName.c_str(), data.temp, data.hum, data.rawLight, db);
-}
-
-void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
-    if (len == sizeof(incomingData)) {
-        memcpy(&incomingData, data, sizeof(incomingData)); 
-        Serial.printf("\n📡 [ESP-NOW] ได้รับข้อมูลจากห้อง: %s\n", incomingData.room);
-        publishToMQTT(incomingData);
-    }
+    client.publish((baseTopic + "sound").c_str(), ("{\"value\": " + String(data.rawSound) + "}").c_str());
 }
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("\n🚀 เริ่มต้นทำงานบอร์ด Gateway...");
-
-    WiFi.disconnect(true); 
-    WiFi.mode(WIFI_STA);
-    Serial.printf("🌐 [Wi-Fi] กำลังเชื่อมต่อ PSU WiFi: %s ", ssid);
+    WiFi.disconnect(true); WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, WPA2_AUTH_PEAP, eap_username, eap_username, eap_password);
+    while (WiFi.status() != WL_CONNECTED) { delay(1000); Serial.print("."); }
 
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 30) {
-        delay(1000); Serial.print("."); attempts++;
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\n✅ [Wi-Fi] เชื่อมต่อสำเร็จ!");
-        Serial.print("📡 IP Address: "); Serial.println(WiFi.localIP()); 
-    } else {
-        Serial.println("\n❌ [Wi-Fi] เชื่อมต่อล้มเหลว (Timeout) กำลังรีบูตบอร์ด...");
-        delay(3000); ESP.restart();
-    }
-
-    client.setServer(mqtt_server, mqtt_port);
+    client.setServer(mqtt_server, mqtt_port); 
     client.setCallback(mqttCallback); 
     
-    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR); 
-    if (esp_now_init() == ESP_OK) {
-        esp_now_register_recv_cb(OnDataRecv);
-        esp_now_peer_info_t peerInfo = {};
-        memcpy(peerInfo.peer_addr, broadcastMac, 6); peerInfo.channel = 0; peerInfo.encrypt = false;
-        esp_now_add_peer(&peerInfo);
-        Serial.println("✅ [ESP-NOW] พร้อมใช้งาน");
-    }
-
     if (radio.begin()) {
-        radio.enableAckPayload(); radio.enableDynamicPayloads(); 
-        radio.openReadingPipe(1, addrR201); radio.openReadingPipe(2, addrCoAi); 
+        radio.enableAckPayload(); 
+        radio.enableDynamicPayloads(); 
+        radio.openReadingPipe(1, addrR201); 
         radio.startListening();
         
-        struct_cmd cmd1 = {"R201", false}; struct_cmd cmd2 = {"Co_Ai", false};
-        radio.writeAckPayload(1, &cmd1, sizeof(cmd1)); radio.writeAckPayload(2, &cmd2, sizeof(cmd2));
-        Serial.println("✅ [nRF24L01] ฟังข้อมูลท่อ 1Node & 2Node");
-    } else {
-        Serial.println("❌ [nRF24L01] ไม่พบโมดูลฮาร์ดแวร์!");
+        // ส่งสถานะเตรียมรอไว้เลย
+        struct_cmd cmd = {"R201", false, false};
+        radio.writeAckPayload(1, &cmd, sizeof(cmd)); 
     }
 }
 
 void loop() {
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("⚠️ [Wi-Fi] หลุดการเชื่อมต่อ! กำลังต่อใหม่...");
-        WiFi.disconnect(); 
-        WiFi.begin(ssid, WPA2_AUTH_PEAP, eap_username, eap_username, eap_password);
-        delay(5000); return;
-    }
-
+    if (WiFi.status() != WL_CONNECTED) { ESP.restart(); }
     if (!client.connected()) {
-        unsigned long now = millis();
-        if (now - lastMqttReconnectAttempt > 5000) {
-            lastMqttReconnectAttempt = now;
-            Serial.println("🔄 [MQTT] กำลังเชื่อมต่อเซิร์ฟเวอร์...");
-            if (client.connect("Gateway_CoE")) {
-                client.subscribe("threshold/#"); 
-                Serial.println("✅ [MQTT] เชื่อมต่อสำเร็จ! (Subscribe: threshold/#)");
-                lastMqttReconnectAttempt = 0;
-            } else {
-                Serial.printf("❌ [MQTT] เชื่อมต่อล้มเหลว รหัสข้อผิดพลาด: %d\n", client.state());
-            }
+        if (millis() - lastMqttReconnectAttempt > 5000) {
+            lastMqttReconnectAttempt = millis();
+            if (client.connect("Gateway_CoE_Floor2")) { 
+                client.subscribe("threshold/R201/#"); 
+                client.subscribe("sim/R201/mock"); // 🌟 Subscribe หัวข้อจำลอง
+                lastMqttReconnectAttempt = 0; 
+                Serial.println("✅ [MQTT] พร้อมทำงาน (รองรับระบบจำลอง R201)");
+            } 
         }
-    } else { 
-        client.loop(); 
-    }
+    } else { client.loop(); }
 
     uint8_t pipeNum;
     if (radio.available(&pipeNum)) {
-        radio.read(&incomingData, sizeof(incomingData));
-        Serial.printf("\n📡 [nRF24] ได้รับข้อมูลจากท่อ %d (ห้อง: %s)\n", pipeNum, incomingData.room);
-        publishToMQTT(incomingData);
+        radio.read(&incomingData, sizeof(incomingData)); 
+        
+        val_temp_R201 = incomingData.temp; 
+        val_hum_R201 = incomingData.hum; 
+        val_snd_R201 = incomingData.rawSound;
+        led_R201 = checkThresholds();
 
-        struct_cmd cmd;
-        if (pipeNum == 1) {
-            strcpy(cmd.room, "R201"); cmd.ledState = led_R201;
-            radio.writeAckPayload(1, &cmd, sizeof(cmd));
-        } else if (pipeNum == 2) {
-            strcpy(cmd.room, "Co_Ai"); cmd.ledState = led_CoAi;
-            radio.writeAckPayload(2, &cmd, sizeof(cmd));
-        }
+        publishToMQTT(incomingData); 
+        
+        // 🌟 ส่งค่า isAlarmOn และ mock_R201 กลับไปให้บอร์ด R201
+        if (pipeNum == 1) { 
+            struct_cmd cmd; strcpy(cmd.room, "R201"); 
+            cmd.ledState = led_R201; 
+            cmd.mockState = mock_R201; // แนบคำสั่ง Mock ไปด้วย
+            radio.writeAckPayload(1, &cmd, sizeof(cmd)); 
+        } 
     }
 }
