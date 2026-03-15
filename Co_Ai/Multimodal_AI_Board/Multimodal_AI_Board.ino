@@ -76,7 +76,7 @@ void loop() {
 
         // 3. 💡 แสง: สุ่มเปิด-ปิดไฟห้อง ทุกๆ 10 ถึง 30 วินาที
         if (millis() - lastLightChange > random(10000, 30000)) {
-            mockLight = (mockLight == 0) ? 100 : 0; 
+            mockLight = (mockLight == 0) ? 1 : 0; // 1 = สว่าง, 0 = มืด
             lastLightChange = millis();
         }
         myData.rawLight = mockLight;
@@ -90,8 +90,8 @@ void loop() {
     } else {
         // --- 📡 โหมดปกติ (อ่านเซนเซอร์จริง) ---
         myData.temp = dht.readTemperature(); myData.hum = dht.readHumidity();
-        int lightPercent = map(analogRead(LDR_PIN), 4095, 0, 0, 100);
-        myData.rawLight = constrain(lightPercent, 0, 100);
+        // ถ้าค่า analog เข้าใกล้ 4095 แปลว่ามืด, ใกล้ 0 แปลว่าสว่าง
+        myData.rawLight = (analogRead(LDR_PIN) < 2000) ? 1 : 0; // แสง 1=มีแสง, 0=มืดไม่มีไฟ
 
         unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
         while (millis() - start < 50) {
