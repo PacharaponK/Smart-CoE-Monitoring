@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   LayoutDashboard, Database, Settings, ChevronLeft, ChevronRight,
   Radio, Activity, Bell, HelpCircle, Image as ImageIcon
