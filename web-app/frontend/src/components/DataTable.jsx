@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, ChevronLeft, ChevronRight, Filter, Download, RefreshCw, Activity, MapPin } from 'lucide-react';
 import ClaySelect from './ClaySelect';
 
@@ -31,23 +31,31 @@ export default function DataTable({ externalData = null, externalLoading = false
     }
   }, [initialRoom, isControlled]);
 
+  // Reset page when external data changes
+  useEffect(() => {
+    if (isControlled) {
+      setCurrentPage(0);
+    }
+  }, [externalData, isControlled]);
+
   const data = isControlled ? externalData : internalData;
   const isLoading = isControlled ? externalLoading : loading;
+
+  // Frontend pagination logic for external data
+  const paginatedData = useMemo(() => {
+    if (!data) return [];
+    if (isControlled) {
+      const startIndex = currentPage * limit;
+      return data.slice(startIndex, startIndex + limit);
+    }
+    return data; // internalData is already paged from API
+  }, [data, isControlled, currentPage, limit]);
 
   const fetchData = useCallback(async (exclusiveStartKey = null) => {
     if (isControlled) return;
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (deviceId) params.set('deviceId', deviceId);
-      if (sensorType) params.set('sensorType', sensorType);
-      if (room) params.set('room', room);
-      params.set('limit', String(limit));
-      if (exclusiveStartKey) {
-        params.set('lastKey', typeof exclusiveStartKey === 'string' ? exclusiveStartKey : JSON.stringify(exclusiveStartKey));
-      }
-
       const baseUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
       const url = new URL(`${baseUrl}/api/sensor-data`);
       
@@ -83,18 +91,26 @@ export default function DataTable({ externalData = null, externalLoading = false
   }, [fetchData, isControlled]);
 
   const handleNextPage = () => {
-    if (!lastKey) return;
-    const newPageKeys = [...pageKeys, lastKey];
-    setPageKeys(newPageKeys);
-    setCurrentPage(currentPage + 1);
-    fetchData(lastKey);
+    if (isControlled) {
+      if ((currentPage + 1) * limit < (data?.length || 0)) {
+        setCurrentPage(currentPage + 1);
+      }
+    } else {
+      if (!lastKey) return;
+      const newPageKeys = [...pageKeys, lastKey];
+      setPageKeys(newPageKeys);
+      setCurrentPage(currentPage + 1);
+      fetchData(lastKey);
+    }
   };
 
   const handlePrevPage = () => {
     if (currentPage <= 0) return;
     const newPage = currentPage - 1;
     setCurrentPage(newPage);
-    fetchData(pageKeys[newPage]);
+    if (!isControlled) {
+      fetchData(pageKeys[newPage]);
+    }
   };
 
   const handleFilter = () => {
@@ -129,6 +145,14 @@ export default function DataTable({ externalData = null, externalLoading = false
     { label: 'AIE', value: 'AIE' },
     { label: 'NETWORK', value: 'NETWORK' },
   ];
+
+  const sensorTypeMap = {
+    'temperature': 'อุณหภูมิ',
+    'humidity': 'ความชื้น',
+    'sound': 'ระดับเสียง',
+    'light': 'ความสว่าง',
+    'motion': 'การเคลื่อนไหว',
+  };
 
   const formatTimestamp = (ts) => {
     try {
@@ -245,31 +269,31 @@ export default function DataTable({ externalData = null, externalLoading = false
           <thead>
             <tr className="bg-gray-50/80">
               <th className="text-left py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
-                Device ID
+                ไอดีอุปกรณ์
               </th>
               <th className="text-left py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
-                Room
+                ห้อง
               </th>
               <th className="text-left py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
-                Timestamp
+                วันเวลา
               </th>
               <th className="text-left py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
-                Sensor Type
+                ประเภทเซ็นเซอร์
               </th>
               <th className="text-right py-3 px-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">
-                Value
+                ค่าที่วัดได้
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {loading ? (
+            {isLoading ? (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-gray-400">
                   <RefreshCw size={24} className="animate-spin mx-auto mb-2" />
                   กำลังโหลดข้อมูล...
                 </td>
               </tr>
-            ) : data.length === 0 ? (
+            ) : paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-gray-400">
                   <Database size={32} className="mx-auto mb-2 opacity-40" />
@@ -277,7 +301,7 @@ export default function DataTable({ externalData = null, externalLoading = false
                 </td>
               </tr>
             ) : (
-              data.map((item, idx) => (
+              paginatedData.map((item, idx) => (
                 <tr
                   key={`${item.DeviceId}-${item.Timestamp}-${idx}`}
                   className="hover:bg-blue-50/30 transition-colors"
@@ -298,7 +322,7 @@ export default function DataTable({ externalData = null, externalLoading = false
                   </td>
                   <td className="py-3 px-4">
                     <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-600 text-xs font-medium">
-                      {item.SensorType}
+                      {sensorTypeMap[item.SensorType] || item.SensorType}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right font-mono font-semibold text-gray-800">
@@ -318,7 +342,7 @@ export default function DataTable({ externalData = null, externalLoading = false
       {/* ส่วนควบคุมหน้า (Pagination) */}
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
         <p className="text-xs text-gray-400">
-          หน้า {currentPage + 1} · แสดง {data.length} รายการ
+          หน้า {currentPage + 1} {isControlled && data && `จาก ${Math.ceil(data.length / limit)}`} · แสดง {paginatedData.length} รายการ {isControlled && data && `(ทั้งหมด ${data.length})`}
         </p>
         <div className="flex items-center gap-2">
           <button
@@ -331,7 +355,7 @@ export default function DataTable({ externalData = null, externalLoading = false
           </button>
           <button
             onClick={handleNextPage}
-            disabled={!lastKey}
+            disabled={isControlled ? (currentPage + 1) * limit >= (data?.length || 0) : !lastKey}
             className="clay-button !px-3 !py-1.5 bg-gray-100 !text-gray-600 text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
           >
             ถัดไป

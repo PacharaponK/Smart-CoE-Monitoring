@@ -1,0 +1,42 @@
+name: Deploy Web App to AWS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web-app/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Executing remote ssh commands using password
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_EC2_IP }}
+          username: ${{ secrets.AWS_EC2_USER }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          port: 22
+          script: |
+            # Navigate to project directory
+            cd ~/smart-coe-monitoring || git clone https://github.com/${{ github.repository }}.git ~/smart-coe-monitoring && cd ~/smart-coe-monitoring
+            
+            # Pull latest changes
+            git fetch origin main
+            git reset --hard origin/main
+            
+            # Move to web-app directory
+            cd web-app
+            
+            # Install all dependencies (frontend + backend)
+            npm run install:all
+            
+            # Build Frontend
+            npm run build:frontend
+            
+            # Restart or start the application using PM2
+            pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
+            
+            # Save PM2 state
+            pm2 save
