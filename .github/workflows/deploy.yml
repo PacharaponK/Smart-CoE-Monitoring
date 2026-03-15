@@ -20,13 +20,20 @@ jobs:
           port: 22
           script: |
             set -e
+            PROJECT_DIR="$HOME/smart-coe-monitoring"
             # Navigate to project directory or clone if it doesn't exist
-            if [ -d "~/smart-coe-monitoring/.git" ]; then
-              cd ~/smart-coe-monitoring
-              git pull origin main
+            if [ -d "$PROJECT_DIR/.git" ]; then
+              cd "$PROJECT_DIR"
+              git fetch origin main
+              git reset --hard origin/main
+            elif [ -d "$PROJECT_DIR" ]; then
+              # If directory exists but is not a git repo, remove and clone
+              rm -rf "$PROJECT_DIR"
+              git clone https://github.com/${{ github.repository }}.git "$PROJECT_DIR"
+              cd "$PROJECT_DIR"
             else
-              git clone https://github.com/${{ github.repository }}.git ~/smart-coe-monitoring
-              cd ~/smart-coe-monitoring
+              git clone https://github.com/${{ github.repository }}.git "$PROJECT_DIR"
+              cd "$PROJECT_DIR"
             fi
             
             # Move to web-app directory
