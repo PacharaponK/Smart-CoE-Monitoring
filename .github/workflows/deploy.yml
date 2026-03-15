@@ -1,0 +1,57 @@
+name: Deploy Web App to AWS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web-app/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Executing remote ssh commands using password
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.AWS_EC2_IP }}
+          username: ${{ secrets.AWS_EC2_USER }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            PROJECT_DIR="$HOME/smart-coe-monitoring"
+            # Navigate to project directory or clone if it doesn't exist
+            if [ -d "$PROJECT_DIR/.git" ]; then
+              cd "$PROJECT_DIR"
+              git fetch origin main
+              git reset --hard origin/main
+            elif [ -d "$PROJECT_DIR" ]; then
+              # If directory exists but is not a git repo, remove and clone
+              rm -rf "$PROJECT_DIR"
+              git clone https://github.com/${{ github.repository }}.git "$PROJECT_DIR"
+              cd "$PROJECT_DIR"
+            else
+              git clone https://github.com/${{ github.repository }}.git "$PROJECT_DIR"
+              cd "$PROJECT_DIR"
+            fi
+            
+            # Move to web-app directory
+            cd web-app
+            
+            # Clean old build artifacts to ensure a fresh build
+            rm -rf frontend/.next
+            
+            # Install all dependencies (frontend + backend)
+            npm run install:all
+            
+            # Build Frontend
+            npm run build:frontend
+            
+            # Restart or start the application using PM2
+            # We use 'delete' first to ensure we don't have port conflicts from differently named old processes
+            pm2 delete coe-frontend coe-backend || true
+            pm2 start ecosystem.config.js
+            
+            # Save PM2 state
+            pm2 save
