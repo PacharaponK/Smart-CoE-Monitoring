@@ -56,8 +56,9 @@ export default function MqttProvider({ children }) {
   }, [messages]);
 
   const connectMqtt = useCallback(() => {
-    // Default to relative URL in production to avoid CORS/PNA issues with Nginx proxy
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+    // Smart default: use localhost:4000 in dev, relative in production
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+      (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : '');
 
     if (socketRef.current) {
       console.log('[MQTT] Disconnecting existing socket...');

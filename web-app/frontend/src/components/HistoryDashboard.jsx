@@ -7,7 +7,8 @@ import HistoryChart from './HistoryChart';
 import DataTable from './DataTable';
 
 export default function HistoryDashboard() {
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+    (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : '');
   
   // Data State
   const [data, setData] = useState([]);

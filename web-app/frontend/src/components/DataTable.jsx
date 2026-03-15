@@ -6,7 +6,8 @@ import ClaySelect from './ClaySelect';
 
 export default function DataTable({ externalData = null, externalLoading = false, initialRoom = '' }) {
   const isControlled = externalData !== null;
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+    (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : '');
   const [internalData, setInternalData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
