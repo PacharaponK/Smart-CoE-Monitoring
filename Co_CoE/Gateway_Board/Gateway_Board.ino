@@ -39,8 +39,20 @@ float val_temp_R200 = 0, val_hum_R200 = 0, val_snd_R200 = 0;
 bool led_R200 = false; 
 bool mock_R200 = false; // 🌟 ตัวแปรเก็บสถานะ Mock ฝั่ง Gateway
 
-bool checkThresholds() {
-    return (val_temp_R200 > th_temp_R200 || val_hum_R200 > th_hum_R200 || val_snd_R200 > th_snd_R200);
+// 🌟 เพิ่ม Threshold และตัวแปรเก็บค่าของ Co_Ai และ R201
+float th_temp_CoAi = 40.0, th_hum_CoAi = 80.0, th_snd_CoAi = 90.0;
+float val_temp_CoAi = 0, val_hum_CoAi = 0, val_snd_CoAi = 0;
+bool led_CoAi = false;
+
+float th_temp_R201 = 40.0, th_hum_R201 = 80.0, th_snd_R201 = 90.0;
+float val_temp_R201 = 0, val_hum_R201 = 0, val_snd_R201 = 0;
+bool led_R201 = false;
+
+bool checkThresholds(String roomName) {
+    if (roomName == "R200") return (val_temp_R200 > th_temp_R200 || val_hum_R200 > th_hum_R200 || val_snd_R200 > th_snd_R200);
+    if (roomName == "Co_Ai") return (val_temp_CoAi > th_temp_CoAi || val_hum_CoAi > th_hum_CoAi || val_snd_CoAi > th_snd_CoAi);
+    if (roomName == "R201") return (val_temp_R201 > th_temp_R201 || val_hum_R201 > th_hum_R201 || val_snd_R201 > th_snd_R201);
+    return false;
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -86,21 +98,35 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         return;
     }
     
-    // ดักจับคำสั่งเปลี่ยนเกณฑ์ Threshold
+    // ดักจับคำสั่งเปลี่ยนเกณฑ์ Threshold แยกตามห้อง
     if (topicStr.startsWith("threshold/R200")) {
-        float val = 0;
-        if (msg.indexOf(':') != -1 && msg.indexOf('}') != -1) {
-            val = msg.substring(msg.indexOf(':') + 1, msg.indexOf('}')).toFloat();
-        } else {
-            val = msg.toFloat(); 
-        }
-
+        float val = getThresholdValue(msg);
         if (topicStr.indexOf("temperature") != -1) th_temp_R200 = val;
         else if (topicStr.indexOf("humidity") != -1) th_hum_R200 = val;
         else if (topicStr.indexOf("sound") != -1) th_snd_R200 = val;
-        
-        led_R200 = checkThresholds(); 
+        led_R200 = checkThresholds("R200"); 
     }
+    else if (topicStr.startsWith("threshold/Co_Ai")) {
+        float val = getThresholdValue(msg);
+        if (topicStr.indexOf("temperature") != -1) th_temp_CoAi = val;
+        else if (topicStr.indexOf("humidity") != -1) th_hum_CoAi = val;
+        else if (topicStr.indexOf("sound") != -1) th_snd_CoAi = val;
+        led_CoAi = checkThresholds("Co_Ai"); 
+    }
+    else if (topicStr.startsWith("threshold/R201")) {
+        float val = getThresholdValue(msg);
+        if (topicStr.indexOf("temperature") != -1) th_temp_R201 = val;
+        else if (topicStr.indexOf("humidity") != -1) th_hum_R201 = val;
+        else if (topicStr.indexOf("sound") != -1) th_snd_R201 = val;
+        led_R201 = checkThresholds("R201"); 
+    }
+}
+
+float getThresholdValue(String msg) {
+    if (msg.indexOf(':') != -1 && msg.indexOf('}') != -1) {
+        return msg.substring(msg.indexOf(':') + 1, msg.indexOf('}')).toFloat();
+    }
+    return msg.toFloat(); 
 }
 
 String createJsonPayload(float value, bool isAlert, String reason) {
@@ -121,12 +147,18 @@ void publishToMQTT(struct_message data) {
     String baseTopic = String(mqtt_topic_prefix) + "/" + roomName + "/";
     Serial.println("📡 [MQTT] กำลังส่งข้อมูล...");
 
-    bool tempAlert = (data.temp > th_temp_R200);
+    // 🌟 ดึงค่า Threshold ตามชื่อห้อง
+    float current_th_temp = 40.0, current_th_hum = 80.0, current_th_snd = 90.0;
+    if (roomName == "R200") { current_th_temp = th_temp_R200; current_th_hum = th_hum_R200; current_th_snd = th_snd_R200; }
+    else if (roomName == "Co_Ai") { current_th_temp = th_temp_CoAi; current_th_hum = th_hum_CoAi; current_th_snd = th_snd_CoAi; }
+    else if (roomName == "R201") { current_th_temp = th_temp_R201; current_th_hum = th_hum_R201; current_th_snd = th_snd_R201; }
+
+    bool tempAlert = (data.temp > current_th_temp);
     String jsonTemp = createJsonPayload(data.temp, tempAlert, tempAlert ? "Temperature exceeds threshold" : "");
     client.publish((baseTopic + "temperature").c_str(), jsonTemp.c_str());
     Serial.println("   -> " + baseTopic + "temperature: " + jsonTemp);
 
-    bool humAlert = (data.hum > th_hum_R200);
+    bool humAlert = (data.hum > current_th_hum);
     String jsonHum = createJsonPayload(data.hum, humAlert, humAlert ? "Humidity exceeds threshold" : "");
     client.publish((baseTopic + "humidity").c_str(), jsonHum.c_str());
     Serial.println("   -> " + baseTopic + "humidity: " + jsonHum);
@@ -135,7 +167,7 @@ void publishToMQTT(struct_message data) {
     client.publish((baseTopic + "light").c_str(), jsonLight.c_str()); 
     Serial.println("   -> " + baseTopic + "light: " + jsonLight);
 
-    bool soundAlert = (data.rawSound > th_snd_R200);
+    bool soundAlert = (data.rawSound > current_th_snd);
     String jsonSound = createJsonPayload(data.rawSound, soundAlert, soundAlert ? "Sound exceeds threshold" : "");
     client.publish((baseTopic + "sound").c_str(), jsonSound.c_str());
     Serial.println("   -> " + baseTopic + "sound: " + jsonSound);
@@ -148,7 +180,16 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *incomingData_buf, 
     if (len == sizeof(struct_message)) {
         struct_message data;
         memcpy(&data, incomingData_buf, sizeof(data));
-        Serial.println("📡 [ESP-NOW] ได้รับข้อมูลจากห้อง " + String(data.room));
+        String rName = String(data.room); rName.trim();
+        Serial.println("📡 [ESP-NOW] ได้รับข้อมูลจากห้อง " + rName);
+        
+        if (rName == "R201") {
+            val_temp_R201 = data.temp;
+            val_hum_R201 = data.hum;
+            val_snd_R201 = data.rawSound;
+            led_R201 = checkThresholds("R201");
+        }
+        
         publishToMQTT(data); // ส่งขึ้น MQTT ทันทีที่ได้รับ
     }
 }
@@ -198,10 +239,15 @@ void loop() {
         if (millis() - lastMqttReconnectAttempt > 5000) {
             lastMqttReconnectAttempt = millis();
             if (client.connect("Gateway_CoE_Floor2")) { 
+                // 🌟 Subscribe ค่าตัวแปร Threshold ของทุกห้อง
                 client.subscribe("threshold/R200/#"); 
-                client.subscribe("sim/R200/mock"); // 🌟 Subscribe หัวข้อจำลอง
-                client.subscribe("sim/Co_Ai/mock"); // 🌟 Subscribe หัวข้อจำลอง
-                client.subscribe("sim/R201/mock"); // 🌟 Subscribe หัวข้อจำลอง
+                client.subscribe("threshold/Co_Ai/#");
+                client.subscribe("threshold/R201/#");
+
+                // 🌟 Subscribe หัวข้อจำลอง
+                client.subscribe("sim/R200/mock"); 
+                client.subscribe("sim/Co_Ai/mock"); 
+                client.subscribe("sim/R201/mock"); 
                 lastMqttReconnectAttempt = 0; 
                 Serial.println("✅ [MQTT] พร้อมทำงาน (รองรับระบบจำลอง R200, Co_Ai, R201)");
             } else {
@@ -216,10 +262,18 @@ void loop() {
         radio.read(&incomingData, sizeof(incomingData)); 
         Serial.println("📦 [RF24] ได้รับข้อมูลจากท่อ " + String(pipeNum));
         
-        val_temp_R200 = incomingData.temp; 
-        val_hum_R200 = incomingData.hum; 
-        val_snd_R200 = incomingData.rawSound;
-        led_R200 = checkThresholds();
+        String rName = String(incomingData.room); rName.trim();
+        if (rName == "R200") {
+            val_temp_R200 = incomingData.temp; 
+            val_hum_R200 = incomingData.hum; 
+            val_snd_R200 = incomingData.rawSound;
+            led_R200 = checkThresholds("R200");
+        } else if (rName == "Co_Ai") {
+            val_temp_CoAi = incomingData.temp; 
+            val_hum_CoAi = incomingData.hum; 
+            val_snd_CoAi = incomingData.rawSound;
+            led_CoAi = checkThresholds("Co_Ai");
+        }
 
         publishToMQTT(incomingData); 
         
@@ -233,7 +287,7 @@ void loop() {
         else if (pipeNum == 2) { 
             // สมมติฐานว่า Co_Ai อาจใช้ท่อ 2 วันข้างหน้า หรือปรับเปลี่ยน Struct ได้
             struct_cmd cmd; strcpy(cmd.room, "Co_Ai"); 
-            cmd.ledState = false; // ยังไม่ทำ Threshold ให้
+            cmd.ledState = led_CoAi; // แจ้งสถานะ Threshold จริงคืนไป
             cmd.mockState = mock_Co_Ai; // แนบคำสั่ง Mock ส่งไปให้ Co_Ai
             radio.writeAckPayload(2, &cmd, sizeof(cmd)); 
         }
@@ -245,7 +299,7 @@ void loop() {
         lastEspNowSend = millis();
         struct_cmd cmdToR201; 
         strcpy(cmdToR201.room, "R201"); 
-        cmdToR201.ledState = false; // สมมติว่ายังไม่ทำ Threshold ให้
+        cmdToR201.ledState = led_R201; // ส่งสถานะ Threshold แจ้งเตือนไป
         cmdToR201.mockState = mock_R201;
         
         // ส่งไปยัง Broadcast Address เนื่องจากยังไม่กำหนด Peer 

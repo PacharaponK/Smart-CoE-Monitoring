@@ -108,13 +108,17 @@ void loop() {
         // ถ้าค่า analog เข้าใกล้ 4095 แปลว่ามืด, ใกล้ 0 แปลว่าสว่าง
         myData.rawLight = (analogRead(LDR_PIN) < 2000) ? 1 : 0; 
 
-        // unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
-        // while (millis() - start < 50) {
-        //     int s = analogRead(SOUND_PIN);
-        //     if (s < 4095) { if (s > sMax) sMax = s; if (s < sMin) sMin = s; }
-        // }
-        // myData.rawSound = sMax - sMin;
-        myData.rawSound = 0; // เซ็นเซอร์เสีย ปิดการอ่านค่าชั่วคราว
+        unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
+        while (millis() - start < 50) {
+            int s = analogRead(SOUND_PIN);
+            if (s < 4095) { if (s > sMax) sMax = s; if (s < sMin) sMin = s; }
+        }
+        int amplitude = sMax - sMin;
+        // Map amplitude from 0-4095 to 0-140 dB
+        myData.rawSound = map(amplitude, 0, 4095, 0, 140);
+        
+        // Ensure the value does not exceed 140 dB
+        myData.rawSound = constrain(myData.rawSound, 0, 140);
     }
 
     esp_now_send(gatewayAddress, (uint8_t *) &myData, sizeof(myData));
