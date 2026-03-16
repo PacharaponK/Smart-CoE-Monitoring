@@ -25,7 +25,7 @@ const MQTT_TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX || 'sensors';
 const MQTT_USERNAME = process.env.MQTT_USERNAME || '';
 const MQTT_PASSWORD = process.env.MQTT_PASSWORD || '';
 
-const ROOMS = (process.env.ROOMS || 'R200,R201,COE,AIE,NETWORK,R302')
+const ROOMS = (process.env.ROOMS || 'R200,R201,R303,Co_Ai')
     .split(',')
     .map(r => r.trim())
     .filter(r => r);

@@ -23,12 +23,8 @@ const QUERY_TIMEOUT_MS = Number(process.env.DDB_QUERY_TIMEOUT_MS || 1800);
 const ALL_ROOMS = [
   "R200",
   "R201",
-  "R302",
   "R303",
-  "COE",
-  "AIE",
   "Co_Ai",
-  "NETWORK",
 ];
 
 /**
