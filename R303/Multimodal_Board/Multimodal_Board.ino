@@ -21,12 +21,18 @@ typedef struct struct_message {
 } __attribute__((packed)) struct_message;
 
 typedef struct struct_cmd {
-    char room[10]; bool ledState;
+    char room[10]; bool ledState; bool mockState;
 } __attribute__((packed)) struct_cmd;
 
 struct_message myData;
 bool isAlarmOn = false; 
+bool isMocking = false; // สถานะการจำลอง
 
+// ตัวแปรเก็บค่าสะสมสำหรับโหมดจำลอง ให้ดูสมจริง
+float mockTemp = 25.0;
+float mockHum = 55.0;
+int mockLight = 0; 
+unsigned long lastLightChange = 0; // จับเวลาการเปลี่ยนไฟ
 void setup() {
     Serial.begin(115200);
     
@@ -61,19 +67,60 @@ void setup() {
 
 void loop() {
     strcpy(myData.room, "R303"); 
-    myData.temp = dht.readTemperature(); 
-    myData.hum = dht.readHumidity();
-    myData.rawLight = !digitalRead(LDR_PIN); 
 
-    unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
-    while (millis() - start < 50) {
-        int s = analogRead(SOUND_PIN);
-        if (s < 4095) { if (s > sMax) sMax = s; if (s < sMin) sMin = s; }
+    // 🌟 เลือกว่าจะอ่านค่าจริง หรือสร้างค่าจำลอง
+    if (isMocking) {
+        // --- 🎭 โหมดจำลองข้อมูล (Mock Mode) ทุกเซนเซอร์! ---
+        
+        // 1. 🌡️ อุณหภูมิ: แกว่งทีละนิด (-0.5 ถึง +0.5)
+        mockTemp += random(-5, 6) / 10.0; 
+        if (mockTemp < 22.0) mockTemp = 22.0;
+        if (mockTemp > 30.0) mockTemp = 30.0;
+        myData.temp = mockTemp;
+
+        // 2. 💧 ความชื้น: แกว่งทีละนิด (-1.5 ถึง +1.5)
+        mockHum += random(-15, 16) / 10.0; 
+        if (mockHum < 45.0) mockHum = 45.0;
+        if (mockHum > 75.0) mockHum = 75.0;
+        myData.hum = mockHum;
+
+        // 3. 💡 แสง (LDR): สุ่มเปิด-ปิดไฟห้อง ทุกๆ 10 ถึง 30 วินาที
+        if (millis() - lastLightChange > random(10000, 30000)) {
+            mockLight = (mockLight == 0) ? 1 : 0; // สลับสถานะไฟ 0 กับ 1
+            lastLightChange = millis();
+        }
+        myData.rawLight = mockLight;
+
+        // 4. 🎤 เสียง (Sound): จำลองเหตุการณ์ในห้อง 3 ระดับ
+        int soundEvent = random(0, 100);
+        if (soundEvent > 95) {
+            myData.rawSound = random(80, 120); // 5% เสียงดัง
+        } else if (soundEvent > 80) {
+            myData.rawSound = random(30, 40);  // 15% เสียงคนคุยกัน
+        } else {
+            myData.rawSound = random(10, 20);   // 80% เสียงแอร์ พัดลม นิ่งๆ
+        }
+    } else {
+        // --- 📡 โหมดปกติ (อ่านเซนเซอร์จริง) ---
+        myData.temp = dht.readTemperature(); 
+        myData.hum = dht.readHumidity();
+        myData.rawLight = !digitalRead(LDR_PIN); 
+
+        unsigned long start = millis(); unsigned int sMax = 0, sMin = 4095;
+        while (millis() - start < 50) {
+            int s = analogRead(SOUND_PIN);
+            if (s < 4095) { if (s > sMax) sMax = s; if (s < sMin) sMin = s; }
+        }
+        myData.rawSound = sMax - sMin;
     }
-    myData.rawSound = sMax - sMin;
 
-    bool dhtErr = isnan(myData.temp) || isnan(myData.hum);
-    bool micErr = (myData.rawSound == 0); 
+    // เช็ค Error (ข้ามไปเลยถ้าอยู่ในโหมดจำลอง จะได้ไม่ฟ้อง Error ปลอม)
+    bool dhtErr = false;
+    bool micErr = false;
+    if (!isMocking) {
+        dhtErr = isnan(myData.temp) || isnan(myData.hum);
+        micErr = (myData.rawSound == 0); 
+    }
 
     // --- จัดหน้าตา Data Report (แยกบรรทัด LDR ให้เห็นชัดๆ) ---
     Serial.println("\n--- Data Report R303 ---");
@@ -82,7 +129,9 @@ void loop() {
     Serial.printf("💡 Light : %d\n", myData.rawLight); 
     Serial.printf("🎤 Sound : %d\n", myData.rawSound);
 
-    if (!dhtErr && !micErr) {
+    if (isMocking) {
+        Serial.println("🎭 Mode: MOCKING (สร้างข้อมูลจำลอง)");
+    } else if (!dhtErr && !micErr) {
         Serial.println("✅ Sensors: ALL OK");
     } else {
         String errStr = "❌ ERR:";
@@ -99,6 +148,7 @@ void loop() {
             struct_cmd cmd; 
             radio.read(&cmd, sizeof(cmd)); 
             isAlarmOn = cmd.ledState; 
+            isMocking = cmd.mockState; // 🌟 รับคำสั่งเปิด/ปิด Mock จาก Gateway
         }
     } else {
         Serial.print("Tx: FAIL "); 

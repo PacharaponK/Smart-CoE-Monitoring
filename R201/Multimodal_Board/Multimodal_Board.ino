@@ -113,7 +113,12 @@ void loop() {
             int s = analogRead(SOUND_PIN);
             if (s < 4095) { if (s > sMax) sMax = s; if (s < sMin) sMin = s; }
         }
-        myData.rawSound = sMax - sMin;
+        int amplitude = sMax - sMin;
+        // Map amplitude from 0-4095 to 0-140 dB
+        myData.rawSound = map(amplitude, 0, 4095, 0, 140);
+        
+        // Ensure the value does not exceed 140 dB
+        myData.rawSound = constrain(myData.rawSound, 0, 140);
     }
 
     esp_now_send(gatewayAddress, (uint8_t *) &myData, sizeof(myData));
