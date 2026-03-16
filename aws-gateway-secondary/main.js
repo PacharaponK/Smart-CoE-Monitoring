@@ -60,6 +60,21 @@ function getQualityStatus(sensorType, value) {
     return 1; // unknown sensor type → assume good
 }
 
+function normalizeIsAlert(rawIsAlert) {
+    if (rawIsAlert === undefined || rawIsAlert === null) {
+        return { value: 0, reason: '' };
+    }
+
+    if (typeof rawIsAlert === 'object') {
+        const normalizedValue = (Number(rawIsAlert.value) === 1 || rawIsAlert.value === true) ? 1 : 0;
+        const normalizedReason = typeof rawIsAlert.reason === 'string' ? rawIsAlert.reason : '';
+        return { value: normalizedValue, reason: normalizedReason };
+    }
+
+    const normalizedValue = (Number(rawIsAlert) === 1 || rawIsAlert === true || rawIsAlert === 'true') ? 1 : 0;
+    return { value: normalizedValue, reason: '' };
+}
+
 // ── AWS IoT Core Setup ────────────────────────────────────────────────────
 function ensureAwsConnected() {
     if (awsClient) {
@@ -196,12 +211,14 @@ localClient.on('message', (topic, message) => {
         }
 
         const bufferKey = `${deviceId}|${sensorType}`;
+        const isAlert = normalizeIsAlert(payload.isAlert !== undefined ? payload.isAlert : payload.IsAlert);
+
         if (!intervalBuffer[bufferKey]) {
             intervalBuffer[bufferKey] = [];
         }
-        intervalBuffer[bufferKey].push(rawValue);
+        intervalBuffer[bufferKey].push({ value: rawValue, isAlert });
 
-        console.log(`[Local MQTT] ${deviceId}/${sensorType}  raw=${rawValue}`);
+        console.log(`[Local MQTT] ${deviceId}/${sensorType}  raw=${rawValue}  isAlert=${isAlert.value}${isAlert.reason ? ` (${isAlert.reason})` : ''}`);
 
     } catch (err) {
         console.log(`[Local MQTT] Bad payload on '${topic}': ${err.message}`);
@@ -322,15 +339,21 @@ setInterval(() => {
             const readings = snapshot[key];
             
             // 2. คำนวณค่าเฉลี่ย
-            const sum = readings.reduce((a, b) => a + b, 0);
+            const sum = readings.reduce((a, b) => a + b.value, 0);
             const avg = Number((sum / readings.length).toFixed(4));
             const quality = getQualityStatus(sensorType, avg);
+            const latestAlert = [...readings].reverse().find(r => r.isAlert && r.isAlert.value === 1);
+            const aggregatedIsAlert = {
+                value: latestAlert ? 1 : 0,
+                reason: latestAlert && latestAlert.isAlert.reason ? latestAlert.isAlert.reason : ''
+            };
 
             // 3. สร้าง Payload ส่งขึ้น Cloud
             const cloudPayload = {
                 DeviceId: deviceId,
                 SensorType: sensorType,
                 SensorValue: avg,
+                IsAlert: aggregatedIsAlert,
                 QualityStatus: quality,
                 CreatedAt: now
             };
@@ -343,7 +366,7 @@ setInterval(() => {
             });
             sent++;
             
-            console.log(`[AWS] ↑ ${deviceId}/${sensorType}  avg=${avg} (n=${readings.length})  quality=${quality ? 'Good' : 'Bad'}`);
+            console.log(`[AWS] ↑ ${deviceId}/${sensorType}  avg=${avg} (n=${readings.length})  quality=${quality ? 'Good' : 'Bad'}  isAlert=${aggregatedIsAlert.value}${aggregatedIsAlert.reason ? ` (${aggregatedIsAlert.reason})` : ''}`);
         });
 
         console.log(`[AWS] Flushed ${sent} message(s). Buffer cleared.\n` + '-'.repeat(50));
