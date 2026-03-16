@@ -47,6 +47,8 @@ export default function EnergyCostTab() {
   }, [mode]);
 
   const fetchAllData = useCallback(async () => {
+    if (!startTime || !endTime) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -56,7 +58,14 @@ export default function EnergyCostTab() {
       
       const endpoint = `${baseUrl}/api/sensor-data`;
       const url = new URL(endpoint);
-      url.searchParams.set('limit', '2000');
+      if (deviceId && deviceId !== '') {
+        url.searchParams.set('deviceId', deviceId);
+      }
+      url.searchParams.set('sensorType', 'light');
+      url.searchParams.set('startTime', startTime);
+      url.searchParams.set('endTime', endTime);
+      url.searchParams.set('limit', '5000');
+      url.searchParams.set('fetchAll', 'true');
 
       console.log("[EnergyTab] Fetching from:", url.toString());
       const res = await fetch(url.toString());
@@ -71,7 +80,7 @@ export default function EnergyCostTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [deviceId, startTime, endTime]);
 
   useEffect(() => {
     fetchAllData();
@@ -79,9 +88,6 @@ export default function EnergyCostTab() {
 
   // Compute results locally whenever raw items or filters change
   const data = useMemo(() => {
-    if (!allRawItems || allRawItems.length === 0) {
-      return null;
-    }
     if (!startTime || !endTime) return null;
     
     const processed = processEnergyData(allRawItems, {
@@ -92,19 +98,16 @@ export default function EnergyCostTab() {
       serviceCharge
     });
     
-    // Check if there is any actual kWh data to justify showing the cards
-    if (processed?.summary?.totalKWh === 0 && (!processed?.dailySeries || processed.dailySeries.every(d => d.kWh === 0))) {
-        return null;
-    }
-
+    console.log("[EnergyTab] Processed data:", processed);
     return processed;
   }, [allRawItems, deviceId, startTime, endTime, ftRate, serviceCharge]);
 
   const deviceOptions = [
+    { label: 'ทุกอุปกรณ์ (All Devices)', value: '' },
     { label: 'R200 (ห้อง 200)', value: 'R200' },
     { label: 'R201 (ห้อง 201)', value: 'R201' },
     { label: 'R303 (ห้อง 303)', value: 'R303' },
-    { label: 'Co_Ai (ห้อง Co-Ai)', value: 'Co_Ai' },
+    { label: 'AI Co-Working Space', value: 'Co_Ai' },
   ];
 
   const modeOptions = [
@@ -157,7 +160,7 @@ export default function EnergyCostTab() {
       </div>
 
       {/* Filters & Settings */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch relative z-20">
         <div className="lg:col-span-2">
           <div className="clay-card !p-5 h-full flex flex-col">
             <div className="flex items-center gap-2 mb-2 border-b border-gray-50 pb-1.5">

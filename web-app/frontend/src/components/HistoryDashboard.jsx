@@ -118,7 +118,7 @@ export default function HistoryDashboard() {
   };
 
   const sensorTypeOptions = [
-    { label: 'ทุกประเภท (All Types)', value: '' },
+    { label: 'ทุกประเภท', value: '' },
     { label: 'Temperature (อุณหภูมิ)', value: 'temperature' },
     { label: 'Humidity (ความชื้น)', value: 'humidity' },
     { label: 'Sound (ระดับเสียง)', value: 'sound' },
@@ -127,14 +127,11 @@ export default function HistoryDashboard() {
   ];
 
   const roomOptions = [
-    { label: 'ทุกห้อง (All Rooms)', value: '' },
+    { label: 'ทุกห้อง', value: '' },
     { label: 'R200', value: 'R200' },
     { label: 'R201', value: 'R201' },
-    { label: 'R302', value: 'R302' },
     { label: 'R303', value: 'R303' },
-    { label: 'Co_Ai', value: 'Co_Ai' },
-    { label: 'AIE', value: 'AIE' },
-    { label: 'NETWORK', value: 'NETWORK' },
+    { label: 'AI Co-Working Space', value: 'Co_Ai' },
   ];
 
   const stats = useMemo(() => {

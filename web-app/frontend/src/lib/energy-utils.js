@@ -50,18 +50,23 @@ export function processEnergyData(items, filters) {
 
   if (isNaN(start) || isNaN(end)) return null;
 
-  // 1. Filter by Device and Time Range (Case-insensitive)
+  // 1. Filter by Time Range and Device (if specified)
   const targetDevice = (deviceId || "").toString().trim().toLowerCase();
   let filteredItems = items.filter(item => {
-    const itemDevice = (item.DeviceId || item.deviceId || "").toString().trim().toLowerCase();
     const itemTimestamp = item.Timestamp || item.timestamp;
     if (!itemTimestamp) return false;
     
     const itemTime = new Date(itemTimestamp).getTime();
-    return itemDevice === targetDevice && itemTime >= start && itemTime <= end;
+    if (itemTime < start || itemTime > end) return false;
+
+    if (targetDevice && targetDevice !== "") {
+      const itemDevice = (item.DeviceId || item.deviceId || "").toString().trim().toLowerCase();
+      return itemDevice === targetDevice;
+    }
+    return true;
   });
 
-  // 2. Filter ONLY 'light' type data as requested
+  // 2. Filter ONLY 'light' type data
   let lightItems = filteredItems.filter(item => {
     const type = (item.SensorType || item.sensorType || "").toLowerCase();
     return type === "light";
@@ -70,28 +75,24 @@ export function processEnergyData(items, filters) {
   let warnings = [];
   if (lightItems.length === 0) {
     warnings.push("ไม่พบข้อมูล 'สถานะไฟ' ในช่วงเวลาที่เลือก");
-    // Return empty results instead of null to keep the UI consistent
     return { 
-      summary: { 
-        totalKWh: 0, 
-        baseCharge: 0, 
-        ftRate, 
-        ftCharge: 0, 
-        serviceCharge, 
-        vatAmount: 0, 
-        totalBill: 0 
-      }, 
+      summary: { totalKWh: 0, baseCharge: 0, ftRate, ftCharge: 0, serviceCharge, vatAmount: 0, totalBill: 0 }, 
       dailySeries: [], 
       warnings 
     };
   }
 
-  // 3. Map 'light' status to estimated power (1 = ON / 100W, 0 = OFF / 0W)
-  const powerItems = lightItems.map(item => ({
-    ...item,
-    SensorType: "power",
-    SensorValue: Number(item.SensorValue ?? item.sensorValue ?? 0) === 1 ? 100 : 0
-  }));
+  // 3. Group by Device to calculate energy per device
+  const deviceGroups = {};
+  lightItems.forEach(item => {
+    const id = (item.DeviceId || item.deviceId || "unknown").toString();
+    if (!deviceGroups[id]) deviceGroups[id] = [];
+    deviceGroups[id].push({
+      ...item,
+      Timestamp: item.Timestamp || item.timestamp,
+      PowerW: Number(item.SensorValue ?? item.sensorValue ?? 0) === 1 ? 100 : 0
+    });
+  });
 
   let totalKWh = 0;
   let dailyMap = {};
@@ -105,38 +106,30 @@ export function processEnergyData(items, filters) {
     iter.setDate(iter.getDate() + 1);
   }
 
-  // Chronological sort for integration
-  const sorted = [...powerItems].sort((a, b) => 
-    new Date(a.Timestamp || a.timestamp) - new Date(b.Timestamp || b.timestamp)
-  );
+  const MAX_GAP_HOURS = 2;
 
-  let energySum = 0;
-  const MAX_GAP_HOURS = 2; // Integrated power only if data points are within 2 hours
-
-  for (let i = 1; i < sorted.length; i++) {
-    const curr = sorted[i];
-    const prev = sorted[i-1];
+  // 4. Calculate energy for each device and aggregate
+  Object.keys(deviceGroups).forEach(id => {
+    const sorted = deviceGroups[id].sort((a, b) => new Date(a.Timestamp) - new Date(b.Timestamp));
     
-    const t1 = new Date(prev.Timestamp || prev.timestamp).getTime();
-    const t2 = new Date(curr.Timestamp || curr.timestamp).getTime();
-    const deltaHours = (t2 - t1) / (1000 * 3600);
-    
-    // Only integrate if the time gap between reports is reasonable
-    if (deltaHours > 0 && deltaHours <= MAX_GAP_HOURS) {
-      const prevVal = parseFloat(prev.SensorValue);
-      const currVal = parseFloat(curr.SensorValue);
+    for (let i = 1; i < sorted.length; i++) {
+      const curr = sorted[i];
+      const prev = sorted[i-1];
       
-      // Calculate average power (W) during the interval and convert to kWh
-      const avgPowerW = (prevVal + currVal) / 2;
-      const kwhDelta = (avgPowerW / 1000) * deltaHours;
+      const t1 = new Date(prev.Timestamp).getTime();
+      const t2 = new Date(curr.Timestamp).getTime();
+      const deltaHours = (t2 - t1) / (1000 * 3600);
       
-      energySum += kwhDelta;
-      const date = (curr.Timestamp || curr.timestamp).split('T')[0];
-      if (dailyMap[date]) dailyMap[date].kWh += kwhDelta;
+      if (deltaHours > 0 && deltaHours <= MAX_GAP_HOURS) {
+        const avgPowerW = (prev.PowerW + curr.PowerW) / 2;
+        const kwhDelta = (avgPowerW / 1000) * deltaHours;
+        
+        totalKWh += kwhDelta;
+        const date = curr.Timestamp.split('T')[0];
+        if (dailyMap[date]) dailyMap[date].kWh += kwhDelta;
+      }
     }
-  }
-  
-  totalKWh = energySum;
+  });
 
   // Final Financial Calculations
   const baseCharge = calculateBaseCharge(totalKWh);

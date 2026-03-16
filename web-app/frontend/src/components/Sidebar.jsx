@@ -10,7 +10,6 @@ const menuItems = [
   { id: 'data', label: 'ข้อมูลย้อนหลัง', icon: Database },
   { id: 'energy-cost', label: 'พลังงานและค่าไฟ', icon: Zap },
   { id: 'images', label: 'รูปภาพห้องเรียน', icon: ImageIcon },
-  { id: 'alerts', label: 'การแจ้งเตือน', icon: Bell },
 ];
 
 const bottomItems = [

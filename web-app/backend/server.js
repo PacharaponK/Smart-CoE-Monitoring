@@ -74,12 +74,8 @@ let iotConnected = false;
 const SENSOR_ROOMS = [
   "R200",
   "R201",
-  "R302",
   "R303",
-  "COE",
-  "AIE",
   "Co_Ai",
-  "NETWORK",
 ];
 const SENSOR_FETCH_ROOM_CHUNK_SIZE = Math.max(
   1,

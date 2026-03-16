@@ -7,7 +7,6 @@ import MqttProvider from "@/components/MqttProvider";
 
 // Modular Tab Components
 import DevicesTab from "@/components/tabs/DevicesTab";
-import AlertsTab from "@/components/tabs/AlertsTab";
 import SettingsTab from "@/components/tabs/SettingsTab";
 import HelpTab from "@/components/tabs/HelpTab";
 import HistoryTab from "@/components/tabs/HistoryTab";
@@ -34,13 +33,15 @@ export default function Home() {
             collapsed ? 'ml-[72px]' : 'ml-[72px] sm:ml-64'
           }`}
         >
-          <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+          <div 
+            key={activeTab}
+            className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+          >
             {activeTab === "dashboard" && <Dashboard />}
             {activeTab === "devices" && <DevicesTab />}
             {activeTab === "data" && <HistoryTab />}
             {activeTab === "energy-cost" && <EnergyCostTab />}
             {activeTab === "images" && <ImagesTab />}
-            {activeTab === "alerts" && <AlertsTab />}
             {activeTab === "settings" && <SettingsTab />}
             {activeTab === "help" && <HelpTab />}
           </div>

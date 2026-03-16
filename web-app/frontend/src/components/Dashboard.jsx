@@ -58,10 +58,16 @@ export default function Dashboard() {
   const roomOptions = useMemo(() => {
     const uniqueRooms = new Set(messages.map(m => m.Room || m.room || m.DeviceId).filter(Boolean));
     // Core PSU CoE rooms
-    ['R200', 'R201', 'R302', 'Co_Ai', 'AIE', 'NETWORK'].forEach(r => uniqueRooms.add(r));
+    ['R200', 'R201', 'Co_Ai'].forEach(r => uniqueRooms.add(r));
     return [
-      { label: 'ทุกห้อง (All Rooms)', value: '' },
-      ...Array.from(uniqueRooms).sort().map(room => ({ label: room, value: room }))
+      { label: 'ทุกห้อง', value: '' },
+      ...Array.from(uniqueRooms)
+        .filter(room => room !== 'COE')
+        .sort()
+        .map(room => ({ 
+          label: room === 'Co_Ai' ? 'AI Co-Working Space' : room, 
+          value: room 
+        }))
     ];
   }, [messages]);
 

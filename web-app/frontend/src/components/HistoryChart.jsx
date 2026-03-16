@@ -87,10 +87,12 @@ export default function HistoryChart({ data = [], loading = false }) {
 
     if (formattedData.length === 0) {
       return (
-        <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-100 rounded-3xl">
-          <Activity size={40} className="mb-2 opacity-20" />
-          <p className="text-sm font-medium">ไม่พบข้อมูลสำหรับแสดงกราฟ</p>
-          <p className="text-xs opacity-60">ลองปรับเปลี่ยนตัวกรองข้อมูล</p>
+        <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/50">
+          <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
+            <Activity size={40} className="text-gray-200" />
+          </div>
+          <p className="text-sm font-bold text-gray-600">ไม่พบข้อมูลสำหรับแสดงกราฟ</p>
+          <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-black">Adjust filters to see results</p>
         </div>
       );
     }
@@ -98,106 +100,117 @@ export default function HistoryChart({ data = [], loading = false }) {
     const ChartComponent = chartType === 'line' ? LineChart : chartType === 'bar' ? BarChart : AreaChart;
 
     return (
-      <ResponsiveContainer width="100%" height="100%">
-        <ChartComponent data={groupedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-          <defs>
-            {sensorTypes.map((type, i) => (
-              <linearGradient key={type} id={`color-${type}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0} />
-              </linearGradient>
-            ))}
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-          <XAxis 
-            dataKey="time" 
-            tick={{ fontSize: 10, fill: '#94a3b8' }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis 
-            domain={[0, isDigitalOnly ? 1.2 : 'auto']}
-            ticks={isDigitalOnly ? [0, 1] : undefined}
-            tickFormatter={(val) => {
-              if (isDigitalOnly) return val === 1 ? 'ON' : val === 0 ? 'OFF' : '';
-              return val;
-            }}
-            tick={{ fontSize: 10, fill: '#94a3b8' }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend 
-            verticalAlign="top" 
-            align="right" 
-            iconType="circle"
-            wrapperStyle={{ paddingBottom: '20px', fontSize: '12px', fontWeight: 'bold' }}
-          />
-          {sensorTypes.map((type, i) => {
-            const color = COLORS[i % COLORS.length];
-            const isTypeDigital = type === 'light';
-            
-            if (chartType === 'line') {
-              return (
-                <Line
-                  key={type}
-                  type={isTypeDigital ? "stepAfter" : "monotone"}
-                  dataKey={type}
-                  stroke={color}
-                  strokeWidth={3}
-                  dot={!isTypeDigital ? { r: 4, strokeWidth: 2, fill: 'white' } : false}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
-                  animationDuration={1500}
-                />
-              );
-            } else if (chartType === 'bar') {
-              return (
-                <Bar
-                  key={type}
-                  dataKey={type}
-                  fill={color}
-                  radius={[4, 4, 0, 0]}
-                  animationDuration={1500}
-                />
-              );
-            } else {
-              return (
-                <Area
-                  key={type}
-                  type={isTypeDigital ? "stepAfter" : "monotone"}
-                  dataKey={type}
-                  stroke={color}
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill={`url(#color-${type})`}
-                  animationDuration={1500}
-                />
-              );
-            }
-          })}
-        </ChartComponent>
-      </ResponsiveContainer>
+      <div className="h-full w-full animate-in fade-in zoom-in-95 duration-1000">
+        <ResponsiveContainer width="100%" height="100%">
+          <ChartComponent data={groupedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <defs>
+              {sensorTypes.map((type, i) => (
+                <linearGradient key={type} id={`color-${type}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0} />
+                </linearGradient>
+              ))}
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <XAxis 
+              dataKey="time" 
+              tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
+              tickLine={false}
+              axisLine={false}
+              dy={10}
+            />
+            <YAxis 
+              domain={[0, isDigitalOnly ? 1.2 : 'auto']}
+              ticks={isDigitalOnly ? [0, 1] : undefined}
+              tickFormatter={(val) => {
+                if (isDigitalOnly) return val === 1 ? 'ON' : val === 0 ? 'OFF' : '';
+                return val;
+              }}
+              tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend 
+              verticalAlign="top" 
+              align="right" 
+              iconType="circle"
+              wrapperStyle={{ 
+                paddingBottom: '30px', 
+                fontSize: '11px', 
+                fontWeight: '900', 
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}
+            />
+            {sensorTypes.map((type, i) => {
+              const color = COLORS[i % COLORS.length];
+              const isTypeDigital = type === 'light';
+              
+              if (chartType === 'line') {
+                return (
+                  <Line
+                    key={type}
+                    type={isTypeDigital ? "stepAfter" : "monotone"}
+                    dataKey={type}
+                    stroke={color}
+                    strokeWidth={4}
+                    dot={!isTypeDigital ? { r: 5, strokeWidth: 3, fill: 'white', stroke: color } : false}
+                    activeDot={{ r: 8, strokeWidth: 0, fill: color }}
+                    animationDuration={2000}
+                  />
+                );
+              } else if (chartType === 'bar') {
+                return (
+                  <Bar
+                    key={type}
+                    dataKey={type}
+                    fill={color}
+                    radius={[6, 6, 0, 0]}
+                    animationDuration={2000}
+                  />
+                );
+              } else {
+                return (
+                  <Area
+                    key={type}
+                    type={isTypeDigital ? "stepAfter" : "monotone"}
+                    dataKey={type}
+                    stroke={color}
+                    strokeWidth={4}
+                    fillOpacity={1}
+                    fill={`url(#color-${type})`}
+                    animationDuration={2000}
+                  />
+                );
+              }
+            })}
+          </ChartComponent>
+        </ResponsiveContainer>
+      </div>
     );
   };
 
   return (
-    <div className="clay-card !p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-50 rounded-2xl text-blue-500 shadow-sm">
-            <TrendingUp size={22} />
+    <div className="clay-card !p-8 border border-white/50 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/30 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:bg-blue-100/40 transition-colors duration-1000" />
+      
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10 relative z-10">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white rounded-2xl text-blue-500 shadow-sm border border-blue-50 group-hover:scale-110 transition-transform duration-500">
+            <TrendingUp size={24} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-800">แนวโน้มข้อมูล (Data Trends)</h3>
-            <p className="text-xs text-gray-400 font-medium">แสดงการเปลี่ยนแปลงของเซ็นเซอร์ตามช่วงเวลา</p>
+            <h3 className="text-xl font-black text-gray-800 tracking-tight uppercase tracking-widest">แนวโน้มข้อมูล</h3>
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-1">Sensor Analytics & Trends</p>
           </div>
         </div>
 
-        <div className="flex bg-gray-100/80 p-1 rounded-xl self-start">
+        <div className="flex bg-gray-100/50 p-1.5 rounded-2xl self-start shadow-inner-sm border border-gray-100">
           <button
             onClick={() => setChartType('area')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
-              chartType === 'area' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${
+              chartType === 'area' ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             <Activity size={14} />
@@ -205,8 +218,8 @@ export default function HistoryChart({ data = [], loading = false }) {
           </button>
           <button
             onClick={() => setChartType('line')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
-              chartType === 'line' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${
+              chartType === 'line' ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             <TrendingUp size={14} />
@@ -214,8 +227,8 @@ export default function HistoryChart({ data = [], loading = false }) {
           </button>
           <button
             onClick={() => setChartType('bar')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
-              chartType === 'bar' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${
+              chartType === 'bar' ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             <BarChart2 size={14} />
@@ -224,7 +237,7 @@ export default function HistoryChart({ data = [], loading = false }) {
         </div>
       </div>
 
-      <div className="h-[350px] w-full">
+      <div className="h-[400px] w-full relative z-10">
         {renderChart()}
       </div>
     </div>

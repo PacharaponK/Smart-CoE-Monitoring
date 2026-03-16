@@ -6,12 +6,8 @@ export const dynamic = "force-dynamic";
 const ALL_ROOMS = [
   "R200",
   "R201",
-  "R302",
   "R303",
-  "COE",
-  "AIE",
   "Co_Ai",
-  "NETWORK",
 ];
 const FETCH_ALL_PAGE_SIZE = 500;
 const FETCH_ALL_MAX_PAGES = 300;
