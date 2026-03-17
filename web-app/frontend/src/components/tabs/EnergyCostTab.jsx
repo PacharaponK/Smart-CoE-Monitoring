@@ -54,20 +54,39 @@ export default function EnergyCostTab() {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ||
         (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : '');
-      const baseUrl = backendUrl ? (backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl) : window.location.origin;
+      const normalizedBaseUrl = backendUrl
+        ? (backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl)
+        : window.location.origin;
 
-      const url = new URL('/api/sensor-data', baseUrl);
-      if (deviceId && deviceId !== '') {
-        url.searchParams.set('deviceId', deviceId);
+      const buildUrl = (base) => {
+        const url = new URL('/api/sensor-data', base);
+        if (deviceId && deviceId !== '') {
+          url.searchParams.set('deviceId', deviceId);
+        }
+        url.searchParams.set('sensorType', 'light');
+        url.searchParams.set('startTime', startTime);
+        url.searchParams.set('endTime', endTime);
+        url.searchParams.set('limit', '5000');
+        url.searchParams.set('fetchAll', 'true');
+        return url;
+      };
+
+      const primaryUrl = buildUrl(normalizedBaseUrl);
+      console.log("[EnergyTab] Fetching from:", primaryUrl.toString());
+
+      let res;
+      try {
+        res = await fetch(primaryUrl.toString(), { cache: 'no-store' });
+      } catch (primaryErr) {
+        const fallbackBase = window.location.origin;
+        const shouldFallback = normalizedBaseUrl !== fallbackBase;
+        if (!shouldFallback) throw primaryErr;
+
+        const fallbackUrl = buildUrl(fallbackBase);
+        console.warn("[EnergyTab] Primary fetch failed, retrying with same-origin:", fallbackUrl.toString());
+        res = await fetch(fallbackUrl.toString(), { cache: 'no-store' });
       }
-      url.searchParams.set('sensorType', 'light');
-      url.searchParams.set('startTime', startTime);
-      url.searchParams.set('endTime', endTime);
-      url.searchParams.set('limit', '5000');
-      url.searchParams.set('fetchAll', 'true');
 
-      console.log("[EnergyTab] Fetching from:", url.toString());
-      const res = await fetch(url.toString());
       if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลเซ็นเซอร์ได้');
 
       const result = await res.json();
@@ -239,6 +258,16 @@ export default function EnergyCostTab() {
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+          <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="text-red-800 font-bold text-sm">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+            <p className="text-red-700 text-xs mt-1 break-all">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Warnings */}
       {data?.warnings?.length > 0 && (
