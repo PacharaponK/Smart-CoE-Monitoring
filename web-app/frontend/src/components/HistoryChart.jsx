@@ -26,7 +26,7 @@ export default function HistoryChart({ data = [], loading = false }) {
 
   const formattedData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    
+
     // Sort by timestamp ascending for the chart
     return [...data]
       .sort((a, b) => new Date(a.Timestamp) - new Date(b.Timestamp))
@@ -48,7 +48,7 @@ export default function HistoryChart({ data = [], loading = false }) {
   const series = useMemo(() => {
     const uniqueRooms = new Set(formattedData.map(d => d.room));
     const uniqueTypes = new Set(formattedData.map(d => d.type));
-    
+
     const uniqueSeries = new Set();
     formattedData.forEach(d => {
       uniqueSeries.add(`${d.room}#${d.type}`);
@@ -57,7 +57,7 @@ export default function HistoryChart({ data = [], loading = false }) {
     return Array.from(uniqueSeries).map(s => {
       const [room, type] = s.split('#');
       let label = `${room} - ${type}`;
-      
+
       // Simplify label if only one dimension has multiple values
       if (uniqueRooms.size === 1 && uniqueTypes.size > 1) {
         label = type;
@@ -66,11 +66,11 @@ export default function HistoryChart({ data = [], loading = false }) {
       } else if (uniqueRooms.size === 1 && uniqueTypes.size === 1) {
         label = type;
       }
-      
-      return { 
-        key: s, 
-        room, 
-        type, 
+
+      return {
+        key: s,
+        room,
+        type,
         label,
         isDigital: type === 'light'
       };
@@ -103,7 +103,7 @@ export default function HistoryChart({ data = [], loading = false }) {
               <span className="text-gray-600 font-medium">{entry.name}:</span>
             </div>
             <span className="font-mono font-bold text-gray-900">
-              {entry.dataKey?.endsWith('#light') 
+              {entry.dataKey?.endsWith('#light')
                 ? (entry.value === 1 ? 'ON' : 'OFF')
                 : (typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value)}
             </span>
@@ -152,14 +152,14 @@ export default function HistoryChart({ data = [], loading = false }) {
               ))}
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-            <XAxis 
-              dataKey="time" 
+            <XAxis
+              dataKey="time"
               tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
               tickLine={false}
               axisLine={false}
               dy={10}
             />
-            <YAxis 
+            <YAxis
               domain={[0, isDigitalOnly ? 1.2 : 'auto']}
               ticks={isDigitalOnly ? [0, 1] : undefined}
               tickFormatter={(val) => {
@@ -171,14 +171,14 @@ export default function HistoryChart({ data = [], loading = false }) {
               axisLine={false}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend 
-              verticalAlign="top" 
-              align="right" 
+            <Legend
+              verticalAlign="top"
+              align="right"
               iconType="circle"
-              wrapperStyle={{ 
-                paddingBottom: '30px', 
-                fontSize: '11px', 
-                fontWeight: '900', 
+              wrapperStyle={{
+                paddingBottom: '30px',
+                fontSize: '11px',
+                fontWeight: '900',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em'
               }}
@@ -187,7 +187,7 @@ export default function HistoryChart({ data = [], loading = false }) {
               const color = COLORS[i % COLORS.length];
               const isTypeDigital = s.isDigital;
               const gradientId = `color-${s.key.replace(/[^a-zA-Z0-9]/g, '_')}`;
-              
+
               if (chartType === 'line') {
                 return (
                   <Line
@@ -240,7 +240,7 @@ export default function HistoryChart({ data = [], loading = false }) {
   return (
     <div className="clay-card !p-8 border border-white/50 relative overflow-hidden group">
       <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/30 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none group-hover:bg-blue-100/40 transition-colors duration-1000" />
-      
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10 relative z-10">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-white rounded-2xl text-blue-500 shadow-sm border border-blue-50 group-hover:scale-110 transition-transform duration-500">
@@ -255,27 +255,24 @@ export default function HistoryChart({ data = [], loading = false }) {
         <div className="flex bg-gray-100/50 p-1.5 rounded-2xl self-start shadow-inner-sm border border-gray-100">
           <button
             onClick={() => setChartType('area')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${
-              chartType === 'area' ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${chartType === 'area' ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
+              }`}
           >
             <Activity size={14} />
             พื้นที่
           </button>
           <button
             onClick={() => setChartType('line')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${
-              chartType === 'line' ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${chartType === 'line' ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
+              }`}
           >
             <TrendingUp size={14} />
             เส้น
           </button>
           <button
             onClick={() => setChartType('bar')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${
-              chartType === 'bar' ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2 ${chartType === 'bar' ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-gray-400 hover:text-gray-600'
+              }`}
           >
             <BarChart2 size={14} />
             แท่ง

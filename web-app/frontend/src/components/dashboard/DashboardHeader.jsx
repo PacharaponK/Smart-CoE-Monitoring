@@ -4,12 +4,12 @@ import { Monitor, Activity, Building2 } from 'lucide-react';
 import ClaySelect from '../ClaySelect';
 import StatusIndicator from '../StatusIndicator';
 
-export default function DashboardHeader({ 
-  selectedRoom, 
-  onRoomChange, 
-  roomOptions, 
-  isConnected, 
-  onReconnect 
+export default function DashboardHeader({
+  selectedRoom,
+  onRoomChange,
+  roomOptions,
+  isConnected,
+  onReconnect
 }) {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -27,7 +27,7 @@ export default function DashboardHeader({
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        <ClaySelect 
+        <ClaySelect
           value={selectedRoom}
           onChange={onRoomChange}
           options={roomOptions}

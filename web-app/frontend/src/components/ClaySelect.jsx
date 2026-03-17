@@ -34,7 +34,7 @@ export default function ClaySelect({
           {label}
         </label>
       )}
-      
+
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -50,9 +50,9 @@ export default function ClaySelect({
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         </div>
-        <ChevronDown 
-          size={16} 
-          className={`text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+        <ChevronDown
+          size={16}
+          className={`text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
@@ -68,8 +68,8 @@ export default function ClaySelect({
                   setIsOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all duration-200 mb-1 last:mb-0
-                  ${value === option.value 
-                    ? 'bg-blue-50 text-blue-600 font-bold' 
+                  ${value === option.value
+                    ? 'bg-blue-50 text-blue-600 font-bold'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
               >

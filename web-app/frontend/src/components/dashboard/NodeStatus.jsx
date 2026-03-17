@@ -16,7 +16,7 @@ export default function NodeStatus({ filteredDeviceData, selectedRoom }) {
           {Object.keys(filteredDeviceData).length} โหนดที่เปิดใช้งาน
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Object.keys(filteredDeviceData).length > 0 ? (
           Object.entries(filteredDeviceData).map(([id, data]) => (

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  Zap, Search, Calendar, RefreshCw, AlertCircle, 
+import {
+  Zap, Search, Calendar, RefreshCw, AlertCircle,
   TrendingUp, DollarSign, Activity, ChevronRight,
   Info, BarChart3, Settings2, Download
 } from 'lucide-react';
@@ -19,11 +19,11 @@ export default function EnergyCostTab() {
   const [mode, setMode] = useState('monthly'); // 'monthly', 'custom'
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  
+
   // Tariff settings
   const [ftRate, setFtRate] = useState(0.3972);
   const [serviceCharge, setServiceCharge] = useState(38.22);
-  
+
   // Data state
   const [allRawItems, setAllRawItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ export default function EnergyCostTab() {
     if (mode === 'monthly') {
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      
+
       const formatDate = (date) => {
         const offset = date.getTimezoneOffset();
         const localDate = new Date(date.getTime() - (offset * 60 * 1000));
@@ -52,10 +52,10 @@ export default function EnergyCostTab() {
     setLoading(true);
     setError(null);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ||
         (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : '');
       const baseUrl = backendUrl ? (backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl) : '';
-      
+
       const endpoint = `${baseUrl}/api/sensor-data`;
       const url = new URL(endpoint);
       if (deviceId && deviceId !== '') {
@@ -89,7 +89,7 @@ export default function EnergyCostTab() {
   // Compute results locally whenever raw items or filters change
   const data = useMemo(() => {
     if (!startTime || !endTime) return null;
-    
+
     const processed = processEnergyData(allRawItems, {
       deviceId,
       startTime,
@@ -97,7 +97,7 @@ export default function EnergyCostTab() {
       ftRate,
       serviceCharge
     });
-    
+
     console.log("[EnergyTab] Processed data:", processed);
     return processed;
   }, [allRawItems, deviceId, startTime, endTime, ftRate, serviceCharge]);
@@ -148,7 +148,7 @@ export default function EnergyCostTab() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-           <button
+          <button
             onClick={fetchAllData}
             disabled={loading}
             className="clay-button !px-4 !py-2 bg-gray-100 !text-gray-600 text-sm flex items-center gap-2"
@@ -167,7 +167,7 @@ export default function EnergyCostTab() {
               <Calendar size={18} className="text-blue-500" />
               <h3 className="text-base font-bold text-gray-700">ตัวเลือกการแสดงผล</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 flex-grow content-start mt-2">
               <ClaySelect
                 label="อุปกรณ์"
@@ -176,7 +176,7 @@ export default function EnergyCostTab() {
                 options={deviceOptions}
                 icon={Zap}
               />
-              
+
               <ClaySelect
                 label="โหมดเวลา"
                 value={mode}
@@ -214,7 +214,7 @@ export default function EnergyCostTab() {
               <Settings2 size={18} className="text-purple-500" />
               <h3 className="text-base font-bold text-gray-700">ตั้งค่าอัตรา</h3>
             </div>
-            
+
             <div className="space-y-3 flex-grow content-start mt-2">
               <div>
                 <label className="block text-[10px] font-black text-gray-400 mb-1 ml-1 uppercase tracking-widest">ค่า Ft (บาท/หน่วย)</label>
@@ -276,7 +276,7 @@ export default function EnergyCostTab() {
 
           {/* Base Rate */}
           <div className="clay-card !p-6 bg-white border-l-8 border-l-emerald-500 flex flex-col justify-between min-h-[140px] h-full shadow-md">
-             <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-4">
               <div className="p-2 bg-emerald-50 rounded-xl text-emerald-500">
                 <DollarSign size={28} />
               </div>
@@ -293,7 +293,7 @@ export default function EnergyCostTab() {
 
           {/* Ft Adjustment */}
           <div className="clay-card !p-6 bg-white border-l-8 border-l-orange-500 flex flex-col justify-between min-h-[140px] h-full shadow-md">
-             <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-4">
               <div className="p-2 bg-orange-50 rounded-xl text-orange-500">
                 <Activity size={28} />
               </div>
@@ -325,7 +325,7 @@ export default function EnergyCostTab() {
                 </div>
               </div>
             </div>
-            
+
             <div className="h-[400px] flex-grow">
               {loading ? (
                 <div className="h-full flex flex-col items-center justify-center text-gray-400">
@@ -336,19 +336,19 @@ export default function EnergyCostTab() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.dailySeries} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis 
-                      dataKey="date" 
+                    <XAxis
+                      dataKey="date"
                       tick={{ fontSize: 10, fill: '#94a3b8' }}
                       tickLine={false}
                       axisLine={false}
                     />
-                    <YAxis 
+                    <YAxis
                       yAxisId="left"
                       tick={{ fontSize: 10, fill: '#94a3b8' }}
                       tickLine={false}
                       axisLine={false}
                     />
-                    <YAxis 
+                    <YAxis
                       yAxisId="right"
                       orientation="right"
                       tick={{ fontSize: 10, fill: '#94a3b8' }}
@@ -374,7 +374,7 @@ export default function EnergyCostTab() {
 
         <div>
           <div className="clay-card !p-6 h-full flex flex-col">
-             <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-indigo-50 rounded-xl text-indigo-500">
                 <Info size={20} />
               </div>
@@ -399,19 +399,19 @@ export default function EnergyCostTab() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-bold text-gray-700">ยอดรวมก่อนภาษี</span>
                     <span className="text-sm font-black text-gray-900">
-                      {((data.summary?.baseCharge ?? 0) + (data.summary?.ftCharge ?? 0) + (data.summary?.serviceCharge ?? 0)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท
+                      {((data.summary?.baseCharge ?? 0) + (data.summary?.ftCharge ?? 0) + (data.summary?.serviceCharge ?? 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
                     </span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-gray-50">
                   <span className="text-sm font-medium text-gray-500">ภาษีมูลค่าเพิ่ม (7%)</span>
-                  <span className="text-sm font-bold text-gray-800">{(data.summary?.vatAmount ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                  <span className="text-sm font-bold text-gray-800">{(data.summary?.vatAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
                 </div>
                 <div className="pt-2 mt-auto">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-black text-blue-600">รวมทั้งสิ้น</span>
                     <span className="text-2xl font-black text-blue-600">
-                      {(data.summary?.totalBill ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท
+                      {(data.summary?.totalBill ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
                     </span>
                   </div>
                 </div>

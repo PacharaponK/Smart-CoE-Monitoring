@@ -2,8 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "Smart CoE Monitoring - แดชบอร์ด IoT",
-  description:
-    "ระบบตรวจวัดและแสดงผลข้อมูลเซ็นเซอร์ IoT แบบ Real-time",
+  description: "ระบบตรวจวัดและแสดงผลข้อมูลเซ็นเซอร์ IoT แบบ Real-time",
   icons: {
     icon: "/images/coe-icon.jpg",
     shortcut: "/images/coe-icon.jpg",

@@ -9,15 +9,15 @@ export default function RoomAnalyticsCard({ room, messages }) {
   // Calculate stats for this specific room
   const roomStats = useMemo(() => {
     const latestMessages = {};
-    
+
     // Get latest value for each sensor type for this room (case-insensitive)
     messages.forEach(msg => {
       const originalType = msg.SensorType || msg.sensorType || 'unknown';
       const type = originalType.toLowerCase();
-      
+
       const msgDate = new Date(msg.receivedAt || msg.Timestamp);
       const latestDate = latestMessages[type] ? new Date(latestMessages[type].receivedAt || latestMessages[type].Timestamp) : new Date(0);
-      
+
       if (!latestMessages[type] || msgDate > latestDate) {
         latestMessages[type] = msg;
       }
@@ -60,18 +60,18 @@ export default function RoomAnalyticsCard({ room, messages }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Chart - Takes 2/3 space on large screens */}
           <div className="lg:col-span-2 clay-card bg-white/60 !p-6">
-             <RealtimeChart 
-                title="" 
-                chartType="area" 
-                messages={messages} 
-              />
+            <RealtimeChart
+              title=""
+              chartType="area"
+              messages={messages}
+            />
           </div>
 
           {/* Room Gauges - Takes 1/3 space on large screens */}
           <div className="lg:col-span-1 clay-card p-6 bg-white/80 relative overflow-hidden flex flex-col justify-center min-h-[400px]">
             <div className="absolute -right-8 -top-8 w-32 h-32 bg-blue-100/20 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -left-8 -bottom-8 w-32 h-32 bg-amber-100/20 rounded-full blur-3xl pointer-events-none" />
-            
+
             <div className="flex items-center gap-3 mb-8 relative z-10">
               <div className="p-2 bg-amber-50 rounded-xl text-amber-500 shadow-sm border border-amber-100/50">
                 <Gauge size={16} />

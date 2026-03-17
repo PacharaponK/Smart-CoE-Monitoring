@@ -1,7 +1,7 @@
 'use client';
 
-import { 
-  HelpCircle, BookOpen, Monitor, Database, Zap, 
+import {
+  HelpCircle, BookOpen, Monitor, Database, Zap,
   Info, Activity, Mail, CheckCircle2, AlertCircle,
   Thermometer, Droplets, Volume2, Lightbulb
 } from 'lucide-react';
@@ -56,7 +56,7 @@ export default function HelpTab() {
               <BookOpen className="text-blue-500" size={20} />
               <h3 className="text-lg font-bold text-gray-700">คำแนะนำการใช้งาน</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 gap-4">
               {sections.map((section, idx) => (
                 <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-gray-50/50 hover:bg-white hover:shadow-md transition-all duration-300 border border-transparent hover:border-blue-50">
@@ -78,7 +78,7 @@ export default function HelpTab() {
               <Activity className="text-emerald-500" size={20} />
               <h3 className="text-lg font-bold text-gray-700">ความหมายของข้อมูลเซ็นเซอร์</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {sensors.map((s, idx) => (
                 <div key={idx} className="flex items-center gap-4 p-3 rounded-xl bg-emerald-50/30 border border-emerald-100/50">
@@ -132,7 +132,7 @@ export default function HelpTab() {
               <p className="text-xs text-gray-400 mb-4 leading-relaxed">
                 หากพบปัญหาในการใช้งานหรือเซ็นเซอร์ขัดข้อง สามารถติดต่อได้ที่ภาควิชาวิศวกรรมคอมพิวเตอร์
               </p>
-              <a 
+              <a
                 href="mailto:support@coe.psu.ac.th"
                 className="inline-block w-full py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 hover:border-blue-200 hover:text-blue-600 transition-all shadow-sm"
               >

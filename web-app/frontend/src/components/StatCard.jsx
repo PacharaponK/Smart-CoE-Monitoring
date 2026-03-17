@@ -1,8 +1,8 @@
 'use client';
 
-import { 
-  Activity, Cpu, Thermometer, Wifi, AlertTriangle, CheckCircle, 
-  Volume2, Lightbulb, Droplets, Sun, Radio 
+import {
+  Activity, Cpu, Thermometer, Wifi, AlertTriangle, CheckCircle,
+  Volume2, Lightbulb, Droplets, Sun, Radio
 } from 'lucide-react';
 
 const iconMap = {

@@ -11,10 +11,10 @@ const COLORS = ['#3b82f6', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899'];
 const MAX_POINTS = 30;
 const CHART_TIMEOUT = 15000; // Consider data stale after 15 seconds
 
-export default function RealtimeChart({ 
-  title = 'Real-time Sensor Data', 
-  chartType = 'area', 
-  messages = [] 
+export default function RealtimeChart({
+  title = 'Real-time Sensor Data',
+  chartType = 'area',
+  messages = []
 }) {
   const { isConnected } = useMqtt();
   const [chartData, setChartData] = useState([]);
@@ -33,30 +33,30 @@ export default function RealtimeChart({
 
     const timeGroups = {};
     const localSensorTypes = new Set();
-    
+
     // Sort oldest to newest for Recharts
     const sorted = [...messages].sort((a, b) => new Date(a.receivedAt) - new Date(b.receivedAt));
-    
+
     sorted.forEach(msg => {
       const originalType = msg.SensorType || msg.sensorType || 'value';
       const type = originalType.toLowerCase();
-      
+
       const timeLabel = new Date(msg.receivedAt || msg.Timestamp).toLocaleTimeString('th-TH', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
       });
-      
+
       if (!timeGroups[timeLabel]) {
         timeGroups[timeLabel] = { time: timeLabel };
       }
-      
+
       timeGroups[timeLabel][type] = Number(msg.SensorValue ?? msg.sensorValue ?? 0);
       localSensorTypes.add(type);
     });
 
     const newData = Object.values(timeGroups).slice(-MAX_POINTS);
-    
+
     setChartData(newData);
     setActiveTypes(Array.from(localSensorTypes));
     setLastUpdateTime(new Date(messages[0].receivedAt));
@@ -86,7 +86,7 @@ export default function RealtimeChart({
           <p key={i} style={{ color: entry.color }} className="flex justify-between gap-4">
             <span>{entry.name}:</span>
             <span className="font-mono font-bold text-gray-900">
-              {entry.name === 'light' 
+              {entry.name === 'light'
                 ? (entry.value === 1 ? 'ON' : 'OFF')
                 : (typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value)}
             </span>

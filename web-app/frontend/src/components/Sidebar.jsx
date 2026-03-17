@@ -29,9 +29,9 @@ export default function Sidebar({ activeTab, onTabChange, collapsed, setCollapse
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
-        <img 
-          src="/images/coe-icon.jpg" 
-          alt="Smart CoE Logo" 
+        <img
+          src="/images/coe-icon.jpg"
+          alt="Smart CoE Logo"
           className="w-10 h-10 rounded-2xl flex-shrink-0 object-cover"
         />
         {!collapsed && (
@@ -52,8 +52,8 @@ export default function Sidebar({ activeTab, onTabChange, collapsed, setCollapse
               key={item.id}
               onClick={() => onTabChange(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${isActive
-                  ? 'bg-blue-50 text-blue-600 font-semibold shadow-sm'
-                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                ? 'bg-blue-50 text-blue-600 font-semibold shadow-sm'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
                 }`}
               title={collapsed ? item.label : undefined}
             >

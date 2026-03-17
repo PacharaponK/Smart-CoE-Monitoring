@@ -90,9 +90,9 @@ export default function ImagesTab() {
                 className="w-full h-full object-cover"
               />
               <div className="absolute bottom-6 left-6 right-6 flex justify-end">
-                <a 
-                  href={images[0]} 
-                  target="_blank" 
+                <a
+                  href={images[0]}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-xl text-blue-600 font-semibold shadow-lg hover:bg-white transition-all"
                 >
@@ -102,9 +102,9 @@ export default function ImagesTab() {
               </div>
             </div>
             <div className="p-4 bg-white/50 backdrop-blur-sm">
-               <p className="text-xs text-gray-400 truncate text-center">
-                  ไฟล์: {images[0].split('/').pop().split('?')[0]}
-               </p>
+              <p className="text-xs text-gray-400 truncate text-center">
+                ไฟล์: {images[0].split('/').pop().split('?')[0]}
+              </p>
             </div>
           </div>
 
@@ -125,9 +125,9 @@ export default function ImagesTab() {
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                      <a 
-                        href={url} 
-                        target="_blank" 
+                      <a
+                        href={url}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 bg-white rounded-full text-blue-600 hover:bg-blue-50 transform scale-0 group-hover:scale-100 transition-transform duration-300 delay-75"
                       >
