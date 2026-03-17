@@ -38,8 +38,10 @@ export default function RealtimeChart({
     const sorted = [...messages].sort((a, b) => new Date(a.receivedAt) - new Date(b.receivedAt));
     
     sorted.forEach(msg => {
-      const type = msg.SensorType || 'value';
-      const timeLabel = new Date(msg.receivedAt).toLocaleTimeString('th-TH', {
+      const originalType = msg.SensorType || msg.sensorType || 'value';
+      const type = originalType.toLowerCase();
+      
+      const timeLabel = new Date(msg.receivedAt || msg.Timestamp).toLocaleTimeString('th-TH', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
@@ -49,7 +51,7 @@ export default function RealtimeChart({
         timeGroups[timeLabel] = { time: timeLabel };
       }
       
-      timeGroups[timeLabel][type] = msg.SensorValue ?? 0;
+      timeGroups[timeLabel][type] = Number(msg.SensorValue ?? msg.sensorValue ?? 0);
       localSensorTypes.add(type);
     });
 

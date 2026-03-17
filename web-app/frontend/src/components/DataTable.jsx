@@ -139,13 +139,10 @@ export default function DataTable({ externalData = null, externalLoading = false
   ];
 
   const roomOptions = [
-    { label: 'ทุกห้อง (All Rooms)', value: '' },
+    { label: 'ทุกห้อง', value: '' },
     { label: 'R200', value: 'R200' },
     { label: 'R201', value: 'R201' },
-    { label: 'R302', value: 'R302' },
-    { label: 'Co_Ai', value: 'Co_Ai' },
-    { label: 'AIE', value: 'AIE' },
-    { label: 'NETWORK', value: 'NETWORK' },
+    { label: 'AI Co-Working Space', value: 'Co_Ai' },
   ];
 
   const sensorTypeMap = {
