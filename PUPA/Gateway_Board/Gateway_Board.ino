@@ -19,7 +19,7 @@ PubSubClient client(espClient);
 RF24 radio(4, 5); 
 const byte addrR303[6] = "3Node"; 
 
-typedef struct struct_cmd { char room[10]; bool ledState; bool mockState; } __attribute__((packed)) struct_cmd;
+typedef struct struct_cmd { char room[10]; bool ledState; bool mockState; bool resetMode; bool stopState; } __attribute__((packed)) struct_cmd;
 typedef struct struct_message { 
     char room[10]; 
     float temp; 
@@ -35,6 +35,8 @@ float th_temp_R303 = 40.0, th_hum_R303 = 80.0, th_snd_R303 = 90.0;
 float val_temp_R303 = 0, val_hum_R303 = 0, val_snd_R303 = 0;
 bool led_R303 = false; 
 bool mock_R303 = false; // 🌟 ตัวแปรเก็บสถานะ Mock
+bool reset_R303 = false; // 🌟 ตัวแปรเก็บสถานะ Reset
+bool stop_R303 = false;  // 🌟 ตัวแปรเก็บสถานะหยุุดส่งค่า
 bool checkThresholds() {
     return (val_temp_R303 > th_temp_R303 || val_hum_R303 > th_hum_R303 || val_snd_R303 > th_snd_R303);
 }
@@ -55,6 +57,20 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             mock_R303 = false;
             Serial.println("🌡️ [MQTT] ปิดโหมดจำลอง กลับไปใช้เซนเซอร์จริง!");
         }
+        return;
+    }
+
+    // 🌟 ดักจับคำสั่ง Reset
+    if (topicStr == "reset/R303/resetmode") {
+        reset_R303 = (msg == "1" || msg.indexOf("\"value\":1") != -1);
+        if (reset_R303) Serial.println("🔄 [MQTT] สั่ง Reset ห้อง R303!");
+        return;
+    }
+
+    // 🌟 ดักจับคำสั่ง Stop Sending (หยุดส่งค่า)
+    if (topicStr == "reset/R303/stop") {
+        stop_R303 = (msg == "1" || msg.indexOf("\"value\":1") != -1);
+        Serial.printf("🛑 [MQTT] %s การส่งค่าของห้อง R303!\n", stop_R303 ? "หยุด" : "เริ่ม");
         return;
     }
 
@@ -85,16 +101,18 @@ void publishToMQTT(struct_message data) {
     if (roomName != "R303") return; 
     if (!client.connected()) return;
     
+    if (stop_R303) return; // ไม่ส่งขึ้น MQTT ถ้ารับคำสั่งหยุด
+    
     String baseTopic = String(mqtt_topic_prefix) + "/" + roomName + "/";
     Serial.println("📡 [MQTT] กำลังส่งข้อมูล...");
 
     bool tempAlert = (data.temp > th_temp_R303);
-    String jsonTemp = createJsonPayload(data.temp, tempAlert, tempAlert ? "Temperature exceeds threshold" : "");
+    String jsonTemp = createJsonPayload(data.temp, tempAlert, tempAlert ? "Temperature exceeds threshold (" + String(th_temp_R303) + " °C)" : "");
     client.publish((baseTopic + "temperature").c_str(), jsonTemp.c_str());
     Serial.println("   -> " + baseTopic + "temperature: " + jsonTemp);
 
     bool humAlert = (data.hum > th_hum_R303);
-    String jsonHum = createJsonPayload(data.hum, humAlert, humAlert ? "Humidity exceeds threshold" : "");
+    String jsonHum = createJsonPayload(data.hum, humAlert, humAlert ? "Humidity exceeds threshold (" + String(th_hum_R303) + " %)" : "");
     client.publish((baseTopic + "humidity").c_str(), jsonHum.c_str());
     Serial.println("   -> " + baseTopic + "humidity: " + jsonHum);
 
@@ -103,7 +121,7 @@ void publishToMQTT(struct_message data) {
     Serial.println("   -> " + baseTopic + "light: " + jsonLight);
 
     bool soundAlert = (data.rawSound > th_snd_R303);
-    String jsonSound = createJsonPayload(data.rawSound, soundAlert, soundAlert ? "Sound exceeds threshold" : "");
+    String jsonSound = createJsonPayload(data.rawSound, soundAlert, soundAlert ? "Sound exceeds threshold (" + String(th_snd_R303) + " dB)" : "");
     client.publish((baseTopic + "sound").c_str(), jsonSound.c_str());
     Serial.println("   -> " + baseTopic + "sound: " + jsonSound);
     
@@ -153,6 +171,8 @@ void loop() {
             if (client.connect("Gateway_CoE_Floor3")) { 
                 client.subscribe("threshold/R303/#"); 
                 client.subscribe("sim/R303/mock"); // 🌟 Subscribe หัวข้อจำลอง
+                client.subscribe("reset/R303/resetmode"); // 🌟 Subscribe หัวข้อ Reset
+                client.subscribe("reset/R303/stop"); // 🌟 Subscribe หัวข้อ Stop
                 lastMqttReconnectAttempt = 0; 
                 Serial.println("✅ [MQTT] พร้อมทำงาน");
             } 
@@ -177,7 +197,10 @@ void loop() {
             struct_cmd cmd; strcpy(cmd.room, "R303"); 
             cmd.ledState = led_R303; 
             cmd.mockState = mock_R303; // แนบคำสั่ง Mock ไปด้วย
+            cmd.resetMode = reset_R303; // แนบคำสั่ง Reset ไปด้วย
+            cmd.stopState = stop_R303; // แนบคำสั่ง Stop ไปด้วย
             radio.writeAckPayload(1, &cmd, sizeof(cmd)); 
+            if (reset_R303) reset_R303 = false; // เคลียร์สถานะเมื่อส่งแล้ว
         } 
     }
 }

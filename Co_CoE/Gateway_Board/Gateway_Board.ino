@@ -24,7 +24,7 @@ const byte addrR200[6] = "1Node"; // ท่อของ R200
 const byte addrCoAi[6] = "2Node"; // ท่อของ Co_Ai
 
 // 🌟 อัปเดต Struct ให้ตรงกับฝั่ง R200 เป๊ะๆ
-typedef struct struct_cmd { char room[10]; bool ledState; bool mockState; } __attribute__((packed)) struct_cmd;
+typedef struct struct_cmd { char room[10]; bool ledState; bool mockState; bool resetMode; bool stopState; } __attribute__((packed)) struct_cmd;
 typedef struct struct_message { char room[10]; float temp; float hum; int rawLight; int rawSound; } __attribute__((packed)) struct_message;
 
 struct_message incomingData;
@@ -38,6 +38,16 @@ float th_temp_R200 = 40.0, th_hum_R200 = 80.0, th_snd_R200 = 90.0;
 float val_temp_R200 = 0, val_hum_R200 = 0, val_snd_R200 = 0;
 bool led_R200 = false; 
 bool mock_R200 = false; // 🌟 ตัวแปรเก็บสถานะ Mock ฝั่ง Gateway
+
+// 🌟 เพิ่มตัวแปรเก็บสถานะสั่ง Reset
+bool reset_R200 = false;
+bool reset_Co_Ai = false;
+bool reset_R201 = false;
+
+// 🌟 เพิ่มตัวแปรเก็บสถานะหยุดส่งข้อมูล
+bool stop_R200 = false;
+bool stop_Co_Ai = false;
+bool stop_R201 = false;
 
 // 🌟 เพิ่ม Threshold และตัวแปรเก็บค่าของ Co_Ai และ R201
 float th_temp_CoAi = 40.0, th_hum_CoAi = 80.0, th_snd_CoAi = 90.0;
@@ -97,6 +107,40 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         }
         return;
     }
+
+    // 🌟 ดักจับคำสั่ง Reset
+    if (topicStr == "reset/R200/resetmode") {
+        reset_R200 = (msg == "1" || msg.indexOf("\"value\":1") != -1);
+        if (reset_R200) Serial.println("🔄 [MQTT] สั่ง Reset ห้อง R200!");
+        return;
+    }
+    if (topicStr == "reset/Co_Ai/resetmode") {
+        reset_Co_Ai = (msg == "1" || msg.indexOf("\"value\":1") != -1);
+        if (reset_Co_Ai) Serial.println("🔄 [MQTT] สั่ง Reset ห้อง Co_Ai!");
+        return;
+    }
+    if (topicStr == "reset/R201/resetmode") {
+        reset_R201 = (msg == "1" || msg.indexOf("\"value\":1") != -1);
+        if (reset_R201) Serial.println("🔄 [MQTT] สั่ง Reset ห้อง R201!");
+        return;
+    }
+
+    // 🌟 ดักจับคำสั่ง Stop Sending (หยุดส่งค่า)
+    if (topicStr == "reset/R200/stop") {
+        stop_R200 = (msg == "1" || msg.indexOf("\"value\":1") != -1);
+        Serial.printf("🛑 [MQTT] %s การส่งค่าของห้อง R200!\n", stop_R200 ? "หยุด" : "เริ่ม");
+        return;
+    }
+    if (topicStr == "reset/Co_Ai/stop") {
+        stop_Co_Ai = (msg == "1" || msg.indexOf("\"value\":1") != -1);
+        Serial.printf("🛑 [MQTT] %s การส่งค่าของห้อง Co_Ai!\n", stop_Co_Ai ? "หยุด" : "เริ่ม");
+        return;
+    }
+    if (topicStr == "reset/R201/stop") {
+        stop_R201 = (msg == "1" || msg.indexOf("\"value\":1") != -1);
+        Serial.printf("🛑 [MQTT] %s การส่งค่าของห้อง R201!\n", stop_R201 ? "หยุด" : "เริ่ม");
+        return;
+    }
     
     // ดักจับคำสั่งเปลี่ยนเกณฑ์ Threshold แยกตามห้อง
     if (topicStr.startsWith("threshold/R200")) {
@@ -143,6 +187,12 @@ void publishToMQTT(struct_message data) {
         Serial.println("❌ ข้ามการส่ง MQTT: ยังไม่ได้เชื่อมต่อ MQTT Broker!");
         return;
     }
+
+    // 🌟 ถ้ารับคำสั่งหยุดส่งค่า ให้ทำงานต่อหน้าเกตเวย์ แต่ไม่บันทึกและไม่ส่งขึ้น MQTT
+    if (roomName == "R200" && stop_R200) return;
+    if (roomName == "Co_Ai" && stop_Co_Ai) return;
+    if (roomName == "R201" && stop_R201) return;
+    
     
     String baseTopic = String(mqtt_topic_prefix) + "/" + roomName + "/";
     Serial.println("📡 [MQTT] กำลังส่งข้อมูล...");
@@ -154,12 +204,12 @@ void publishToMQTT(struct_message data) {
     else if (roomName == "R201") { current_th_temp = th_temp_R201; current_th_hum = th_hum_R201; current_th_snd = th_snd_R201; }
 
     bool tempAlert = (data.temp > current_th_temp);
-    String jsonTemp = createJsonPayload(data.temp, tempAlert, tempAlert ? "Temperature exceeds threshold" : "");
+    String jsonTemp = createJsonPayload(data.temp, tempAlert, tempAlert ? "Temperature exceeds threshold (" + String(current_th_temp) + " °C)" : "");
     client.publish((baseTopic + "temperature").c_str(), jsonTemp.c_str());
     Serial.println("   -> " + baseTopic + "temperature: " + jsonTemp);
 
     bool humAlert = (data.hum > current_th_hum);
-    String jsonHum = createJsonPayload(data.hum, humAlert, humAlert ? "Humidity exceeds threshold" : "");
+    String jsonHum = createJsonPayload(data.hum, humAlert, humAlert ? "Humidity exceeds threshold (" + String(current_th_hum) + " %)" : "");
     client.publish((baseTopic + "humidity").c_str(), jsonHum.c_str());
     Serial.println("   -> " + baseTopic + "humidity: " + jsonHum);
 
@@ -168,7 +218,7 @@ void publishToMQTT(struct_message data) {
     Serial.println("   -> " + baseTopic + "light: " + jsonLight);
 
     bool soundAlert = (data.rawSound > current_th_snd);
-    String jsonSound = createJsonPayload(data.rawSound, soundAlert, soundAlert ? "Sound exceeds threshold" : "");
+    String jsonSound = createJsonPayload(data.rawSound, soundAlert, soundAlert ? "Sound exceeds threshold (" + String(current_th_snd) + " dB)" : "");
     client.publish((baseTopic + "sound").c_str(), jsonSound.c_str());
     Serial.println("   -> " + baseTopic + "sound: " + jsonSound);
     
@@ -248,8 +298,19 @@ void loop() {
                 client.subscribe("sim/R200/mock"); 
                 client.subscribe("sim/Co_Ai/mock"); 
                 client.subscribe("sim/R201/mock"); 
+
+                // 🌟 Subscribe หัวข้อ Reset
+                client.subscribe("reset/R200/resetmode"); 
+                client.subscribe("reset/Co_Ai/resetmode"); 
+                client.subscribe("reset/R201/resetmode"); 
+
+                // 🌟 Subscribe หัวข้อ Stop
+                client.subscribe("reset/R200/stop"); 
+                client.subscribe("reset/Co_Ai/stop"); 
+                client.subscribe("reset/R201/stop"); 
+
                 lastMqttReconnectAttempt = 0; 
-                Serial.println("✅ [MQTT] พร้อมทำงาน (รองรับระบบจำลอง R200, Co_Ai, R201)");
+                Serial.println("✅ [MQTT] พร้อมทำงาน (รองรับระบบจำลองและ Reset R200, Co_Ai, R201)");
             } else {
                 Serial.print("❌ [MQTT] เชื่อมต่อล้มเหลว สถานะ: ");
                 Serial.println(client.state());
@@ -282,14 +343,20 @@ void loop() {
             struct_cmd cmd; strcpy(cmd.room, "R200"); 
             cmd.ledState = led_R200; 
             cmd.mockState = mock_R200; // แนบคำสั่ง Mock ไปด้วย
+            cmd.resetMode = reset_R200; // แนบคำสั่ง Reset ไปด้วย
+            cmd.stopState = stop_R200; // แนบคำสั่ง Stop ไปด้วย
             radio.writeAckPayload(1, &cmd, sizeof(cmd)); 
+            if (reset_R200) reset_R200 = false; // เคลียร์สถานะหลังจากส่งออกไปแล้ว
         } 
         else if (pipeNum == 2) { 
             // สมมติฐานว่า Co_Ai อาจใช้ท่อ 2 วันข้างหน้า หรือปรับเปลี่ยน Struct ได้
             struct_cmd cmd; strcpy(cmd.room, "Co_Ai"); 
             cmd.ledState = led_CoAi; // แจ้งสถานะ Threshold จริงคืนไป
             cmd.mockState = mock_Co_Ai; // แนบคำสั่ง Mock ส่งไปให้ Co_Ai
+            cmd.resetMode = reset_Co_Ai; // แนบคำสั่ง Reset ไปด้วย
+            cmd.stopState = stop_Co_Ai; // แนบคำสั่ง Stop ไปด้วย
             radio.writeAckPayload(2, &cmd, sizeof(cmd)); 
+            if (reset_Co_Ai) reset_Co_Ai = false; // เคลียร์สถานะหลังจากส่งออกไปแล้ว
         }
     }
 
@@ -301,6 +368,10 @@ void loop() {
         strcpy(cmdToR201.room, "R201"); 
         cmdToR201.ledState = led_R201; // ส่งสถานะ Threshold แจ้งเตือนไป
         cmdToR201.mockState = mock_R201;
+        cmdToR201.resetMode = reset_R201;
+        cmdToR201.stopState = stop_R201;
+
+        if (reset_R201) reset_R201 = false; // เคลียร์สถานะหลังจากเตรียมส่งออกไปแล้ว
         
         // ส่งไปยัง Broadcast Address เนื่องจากยังไม่กำหนด Peer 
         uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
