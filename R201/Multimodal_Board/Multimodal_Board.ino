@@ -21,12 +21,13 @@ typedef struct struct_message {
 } __attribute__((packed)) struct_message;
 
 typedef struct struct_cmd {
-    char room[10]; bool ledState; bool mockState; // 🌟 รับคำสั่งให้ทำงานแบบ Mock
+    char room[10]; bool ledState; bool mockState; bool resetMode; bool stopState; // 🌟 รับคำสั่งให้ทำงานแบบ Mock
 } __attribute__((packed)) struct_cmd;
 
 struct_message myData;
 bool isAlarmOn = false; 
 bool isMocking = false; // 🌟 สถานะการจำลอง
+bool isStopped = false; // 🌟 สถานะหยุดส่ง
 
 // 🌟 ตัวแปรเก็บค่าสะสมสำหรับโหมดจำลอง 
 float mockTemp = 25.0;
@@ -46,6 +47,16 @@ void OnDataRecv(const esp_now_recv_info *info, const uint8_t *data, int len) {
         if (strcmp(cmd.room, "R201") == 0) {
             isAlarmOn = cmd.ledState;
             isMocking = cmd.mockState; // 🌟 รับคำสั่งเปิด/ปิด Mock
+            isStopped = cmd.stopState; // 🌟 รับคำสั่งให้หยุดส่ง
+
+            
+            // 🌟 รับคำสั่ง Reset จาก Gateway
+            if (cmd.resetMode) {
+                lcd.clear();
+                lcd.setCursor(0, 0); lcd.print("RESET CMD RCV");
+                delay(1000);
+                ESP.restart();
+            }
         }
     }
 }
@@ -121,15 +132,19 @@ void loop() {
         myData.rawSound = constrain(myData.rawSound, 0, 140);
     }
 
-    esp_now_send(gatewayAddress, (uint8_t *) &myData, sizeof(myData));
-    delay(20); 
+    bool allowSend = !isStopped;
+    if (allowSend) {
+        esp_now_send(gatewayAddress, (uint8_t *) &myData, sizeof(myData));
+        delay(20); 
+    }
 
     bool dhtErr = isnan(myData.temp) || isnan(myData.hum);
     bool micErr = (myData.rawSound == 0); 
 
     lcd.clear(); 
     lcd.setCursor(0, 0);
-    if (isMocking) lcd.print("Mode: MOCKING 🎭");
+    if (isStopped) lcd.print("Mode: STOPPED 🛑");
+    else if (isMocking) lcd.print("Mode: MOCKING 🎭");
     else if (!dhtErr && !micErr) lcd.print("Sensors: ALL OK ");
     else {
         String errStr = "ERR:";
@@ -139,7 +154,9 @@ void loop() {
     }
 
     lcd.setCursor(0, 1); 
-    if (lastTxSuccess) lcd.print("Tx: OK   "); else lcd.print("Tx: FAIL ");
+    if (!allowSend) lcd.print("Tx: STOP ");
+    else if (lastTxSuccess) lcd.print("Tx: OK   "); 
+    else lcd.print("Tx: FAIL ");
     
     lcd.setCursor(11, 1);
     if (isAlarmOn) lcd.print("[ALM]"); else lcd.print("     ");

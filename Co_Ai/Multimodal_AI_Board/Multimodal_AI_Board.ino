@@ -22,11 +22,12 @@ typedef struct struct_message {
 } __attribute__((packed)) struct_message;
 
 typedef struct struct_cmd {
-    char room[10]; bool ledState; bool mockState; // 🌟 รับคำสั่งให้ทำงานแบบ Mock
+    char room[10]; bool ledState; bool mockState; bool resetMode; bool stopState;
 } __attribute__((packed)) struct_cmd;
 
 // 🌟 สถานะและตัวแปรแบบ Mock
 bool isMocking = false; 
+bool isStopped = false; 
 float mockTemp = 25.0;
 float mockHum = 55.0;
 int mockLight = 0; 
@@ -103,12 +104,34 @@ void loop() {
 
     bool txOk = false; // 🌟 สร้างตัวแปรมาเก็บสถานะส่ง เพื่อให้จอ LCD เอาไปใช้ต่อ
     
-    if (radio.write(&myData, sizeof(myData))) {
-        txOk = true; // 🌟 ส่งสำเร็จ
-        if (radio.isAckPayloadAvailable()) {
-            struct_cmd cmd; radio.read(&cmd, sizeof(cmd)); 
-            isAlarmOn = cmd.ledState; 
-            isMocking = cmd.mockState; // 🌟 รับคำสั่ง Mock จาก Gateway
+    bool allowSend = true;
+    if (isStopped) {
+        static unsigned long lastPing = 0;
+        if (millis() - lastPing > 5000) {
+            lastPing = millis();
+            allowSend = true;
+        } else {
+            allowSend = false;
+        }
+    }
+
+    if (allowSend) {
+        if (radio.write(&myData, sizeof(myData))) {
+            txOk = true; // 🌟 ส่งสำเร็จ
+            if (radio.isAckPayloadAvailable()) {
+                struct_cmd cmd; radio.read(&cmd, sizeof(cmd)); 
+                isAlarmOn = cmd.ledState; 
+                isMocking = cmd.mockState; // 🌟 รับคำสั่ง Mock จาก Gateway
+                isStopped = cmd.stopState; // 🌟 รับคำสั่งให้หยุดส่งข้อมูล
+                
+                // 🌟 รับคำสั่ง Reset จาก Gateway
+                if (cmd.resetMode) {
+                    lcd.clear();
+                    lcd.setCursor(0, 0); lcd.print("RESET CMD RCV");
+                    delay(1000);
+                    ESP.restart();
+                }
+            }
         }
     }
 
@@ -117,7 +140,9 @@ void loop() {
     // ---------------------------------------------------------
     lcd.clear(); 
     lcd.setCursor(0, 0);
-    if (isMocking) {
+    if (isStopped) {
+        lcd.print("Mode: STOPPED 🛑");
+    } else if (isMocking) {
         lcd.print("Mode: MOCKING 🎭");
     } else if (isnan(myData.temp) || isnan(myData.hum)) {
         lcd.print("ERR: DHT Sensor");
@@ -127,7 +152,9 @@ void loop() {
     }
 
     lcd.setCursor(0, 1); 
-    if (txOk) {
+    if (!allowSend) {
+        lcd.print("Tx: STOP");
+    } else if (txOk) {
         lcd.print("Tx: OK "); 
     } else {
         lcd.print("Tx: FAIL"); 

@@ -23,12 +23,13 @@ typedef struct struct_message {
 
 // 🌟 Struct มีตัวแปร mockState รับคำสั่งจาก Gateway
 typedef struct struct_cmd {
-    char room[10]; bool ledState; bool mockState; 
+    char room[10]; bool ledState; bool mockState; bool resetMode; bool stopState;
 } __attribute__((packed)) struct_cmd;
 
 struct_message myData;
 bool isAlarmOn = false; 
 bool isMocking = false; // สถานะการจำลอง
+bool isStopped = false; // สถานะหยุดส่งข้อมูล
 
 // 🌟 ตัวแปรเก็บค่าสะสมสำหรับโหมดจำลอง ให้ดูสมจริง
 float mockTemp = 25.0;
@@ -122,7 +123,8 @@ void loop() {
     // โชว์สถานะบนจอ LCD
     lcd.clear(); 
     lcd.setCursor(0, 0);
-    if (isMocking) lcd.print("Mode: MOCKING 🎭"); // 🌟 โชว์ชัดๆ ว่ากำลังจำลองค่าอยู่
+    if (isStopped) lcd.print("Mode: STOPPED 🛑");
+    else if (isMocking) lcd.print("Mode: MOCKING 🎭"); // 🌟 โชว์ชัดๆ ว่ากำลังจำลองค่าอยู่
     else if (!dhtErr && !micErr) lcd.print("Sensors: ALL OK");
     else {
         String errStr = "ERR:";
@@ -133,18 +135,44 @@ void loop() {
 
     // ส่งข้อมูล
     lcd.setCursor(0, 1); 
-    if (radio.write(&myData, sizeof(myData))) {
-        lcd.print("Tx: OK "); 
-        
-        // รับคำสั่งกลับจาก Gateway
-        if (radio.isAckPayloadAvailable()) {
-            struct_cmd cmd; 
-            radio.read(&cmd, sizeof(cmd)); 
-            isAlarmOn = cmd.ledState; 
-            isMocking = cmd.mockState; // 🌟 รับคำสั่งเปิด/ปิด Mock จาก Gateway
+
+    bool allowSend = true;
+    if (isStopped) {
+        // โหมดหยุดส่ง: ส่งข้อมูลแค่ทุกๆ 5 วินาทีเพื่อเช็คคำสั่งกลับจาก Gateway
+        static unsigned long lastPing = 0;
+        if (millis() - lastPing > 5000) {
+            lastPing = millis();
+            allowSend = true;
+        } else {
+            allowSend = false;
+        }
+    }
+
+    if (allowSend) {
+        if (radio.write(&myData, sizeof(myData))) {
+            lcd.print("Tx: OK "); 
+            
+            // รับคำสั่งกลับจาก Gateway
+            if (radio.isAckPayloadAvailable()) {
+                struct_cmd cmd; 
+                radio.read(&cmd, sizeof(cmd)); 
+                isAlarmOn = cmd.ledState; 
+                isMocking = cmd.mockState; // 🌟 รับคำสั่งเปิด/ปิด Mock จาก Gateway
+                isStopped = cmd.stopState; // 🌟 รับคำสั่งให้หยุดส่งข้อมูล
+                
+                // 🌟 รับคำสั่ง Reset จาก Gateway
+                if (cmd.resetMode) {
+                    lcd.clear();
+                    lcd.setCursor(0, 0); lcd.print("RESET CMD RCV");
+                    delay(1000);
+                    ESP.restart();
+                }
+            }
+        } else {
+            lcd.print("Tx: FAIL"); 
         }
     } else {
-        lcd.print("Tx: FAIL"); 
+        lcd.print("Tx: STOP"); 
     }
 
     // โชว์สถานะ Alarm

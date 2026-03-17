@@ -21,12 +21,13 @@ typedef struct struct_message {
 } __attribute__((packed)) struct_message;
 
 typedef struct struct_cmd {
-    char room[10]; bool ledState; bool mockState;
+    char room[10]; bool ledState; bool mockState; bool resetMode; bool stopState;
 } __attribute__((packed)) struct_cmd;
 
 struct_message myData;
 bool isAlarmOn = false; 
 bool isMocking = false; // สถานะการจำลอง
+bool isStopped = false; // สถานะหยุดส่งข้อมูล
 
 // ตัวแปรเก็บค่าสะสมสำหรับโหมดจำลอง ให้ดูสมจริง
 float mockTemp = 25.0;
@@ -129,7 +130,9 @@ void loop() {
     Serial.printf("💡 Light : %d\n", myData.rawLight); 
     Serial.printf("🎤 Sound : %d\n", myData.rawSound);
 
-    if (isMocking) {
+    if (isStopped) {
+        Serial.println("🛑 Mode: STOPPED (หยุดส่งข้อมูล)");
+    } else if (isMocking) {
         Serial.println("🎭 Mode: MOCKING (สร้างข้อมูลจำลอง)");
     } else if (!dhtErr && !micErr) {
         Serial.println("✅ Sensors: ALL OK");
@@ -142,16 +145,40 @@ void loop() {
 
     // --- ส่งข้อมูลผ่าน nRF24 ---
     Serial.print("📡 Transmit: ");
-    if (radio.write(&myData, sizeof(myData))) {
-        Serial.print("Tx: OK "); 
-        if (radio.isAckPayloadAvailable()) {
-            struct_cmd cmd; 
-            radio.read(&cmd, sizeof(cmd)); 
-            isAlarmOn = cmd.ledState; 
-            isMocking = cmd.mockState; // 🌟 รับคำสั่งเปิด/ปิด Mock จาก Gateway
+
+    bool allowSend = true;
+    if (isStopped) {
+        static unsigned long lastPing = 0;
+        if (millis() - lastPing > 5000) {
+            lastPing = millis();
+            allowSend = true;
+        } else {
+            allowSend = false;
+        }
+    }
+
+    if (allowSend) {
+        if (radio.write(&myData, sizeof(myData))) {
+            Serial.print("Tx: OK "); 
+            if (radio.isAckPayloadAvailable()) {
+                struct_cmd cmd; 
+                radio.read(&cmd, sizeof(cmd)); 
+                isAlarmOn = cmd.ledState; 
+                isMocking = cmd.mockState; // 🌟 รับคำสั่งเปิด/ปิด Mock จาก Gateway
+                isStopped = cmd.stopState; // 🌟 รับคำสั่งให้หยุดส่งข้อมูล
+                
+                // 🌟 รับคำสั่ง Reset จาก Gateway
+                if (cmd.resetMode) {
+                    Serial.println("🔄 RESET CMD RCV! REBOOTING...");
+                    delay(1000);
+                    ESP.restart();
+                }
+            }
+        } else {
+            Serial.print("Tx: FAIL "); 
         }
     } else {
-        Serial.print("Tx: FAIL "); 
+        Serial.print("Tx: STOP "); 
     }
 
     // แจ้งเตือนสถานะ Alarm
