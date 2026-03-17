@@ -54,10 +54,9 @@ export default function EnergyCostTab() {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ||
         (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : '');
-      const baseUrl = backendUrl ? (backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl) : '';
+      const baseUrl = backendUrl ? (backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl) : window.location.origin;
 
-      const endpoint = `${baseUrl}/api/sensor-data`;
-      const url = new URL(endpoint);
+      const url = new URL('/api/sensor-data', baseUrl);
       if (deviceId && deviceId !== '') {
         url.searchParams.set('deviceId', deviceId);
       }
@@ -76,7 +75,7 @@ export default function EnergyCostTab() {
       setAllRawItems(result.items || []);
     } catch (err) {
       console.error("[EnergyTab] Fetch error:", err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
     } finally {
       setLoading(false);
     }
