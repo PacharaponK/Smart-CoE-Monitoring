@@ -47,13 +47,13 @@ export default function RoomAnalyticsCard({ room, messages }) {
               <Activity size={18} />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 text-lg">Room: {room}</h3>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Live Telemetry Stream</p>
+              <h3 className="font-bold text-gray-800 text-lg">ห้อง: {room === 'Co_Ai' ? 'AI Co-Working Space' : room}</h3>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">กระแสข้อมูลแบบ Real-time</p>
             </div>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-tight">Active</span>
+            <span className="text-[10px] font-bold uppercase tracking-tight">กำลังใช้งาน</span>
           </div>
         </div>
 
@@ -83,28 +83,28 @@ export default function RoomAnalyticsCard({ room, messages }) {
               <SensorGauge
                 value={roomStats.temperature}
                 max={50}
-                label="Temp (°C)"
+                label="อุณหภูมิ (°C)"
                 color="#f97316"
                 size={110}
               />
               <SensorGauge
                 value={roomStats.humidity}
                 max={100}
-                label="Humid (%RH)"
+                label="ความชื้น (%RH)"
                 color="#0ea5e9"
                 size={110}
               />
               <SensorGauge
                 value={roomStats.sound}
                 max={120}
-                label="Sound (dB)"
+                label="ระดับเสียง (dB)"
                 color="#8b5cf6"
                 size={110}
               />
               <SensorGauge
                 value={roomStats.light}
                 max={1}
-                label="Light"
+                label="แสงสว่าง"
                 color="#fbbf24"
                 size={110}
               />

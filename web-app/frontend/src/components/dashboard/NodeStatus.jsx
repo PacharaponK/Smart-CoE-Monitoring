@@ -10,7 +10,7 @@ export default function NodeStatus({ filteredDeviceData, selectedRoom }) {
           <div className="p-2 bg-emerald-50 rounded-xl text-emerald-500">
             <Zap size={18} />
           </div>
-          <h3 className="text-lg font-bold text-gray-700">สถานะอุปกรณ์ (Node Status)</h3>
+          <h3 className="text-lg font-bold text-gray-700">สถานะอุปกรณ์</h3>
         </div>
         <div className="text-xs font-semibold text-gray-400 bg-gray-50 px-3 py-1 rounded-lg">
           {Object.keys(filteredDeviceData).length} โหนดที่เปิดใช้งาน
@@ -45,7 +45,7 @@ export default function NodeStatus({ filteredDeviceData, selectedRoom }) {
             <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center">
               <Activity size={20} className="text-gray-200" />
             </div>
-            <p>กำลังรอข้อมูลจาก {selectedRoom || 'โหนดที่เปิดใช้งาน'}...</p>
+            <p>กำลังรอข้อมูลจาก {selectedRoom === 'Co_Ai' ? 'AI Co-Working Space' : selectedRoom || 'โหนดที่เปิดใช้งาน'}...</p>
           </div>
         )}
       </div>

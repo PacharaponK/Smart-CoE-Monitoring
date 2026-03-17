@@ -106,7 +106,7 @@ export default function RealtimeChart({
           {isDataStale && chartData.length > 0 && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
               <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-              Data Stale
+              ข้อมูลไม่อัปเดต
             </span>
           )}
         </div>
@@ -134,8 +134,8 @@ export default function RealtimeChart({
         {chartData.length === 0 ? (
           <div className="h-full flex items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm text-gray-400">
             {isConnected
-              ? 'Connected to backend socket, waiting for telemetry...'
-              : 'Backend socket disconnected. Check backend server status.'}
+              ? 'เชื่อมต่อสำเร็จ กำลังรอข้อมูลเซ็นเซอร์...'
+              : 'ขาดการเชื่อมต่อกับ Backend กรุณาตรวจสอบเซิร์ฟเวอร์'}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%" key={activeTypes.join(',')}>

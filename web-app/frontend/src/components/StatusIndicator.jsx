@@ -16,12 +16,12 @@ export default function StatusIndicator({ isConnected, onReconnect }) {
         {isConnected ? (
           <>
             <Wifi size={14} />
-            <span>Live</span>
+            <span>ออนไลน์</span>
           </>
         ) : (
           <>
             <WifiOff size={14} />
-            <span>Offline</span>
+            <span>ออฟไลน์</span>
           </>
         )}
       </div>
@@ -29,7 +29,7 @@ export default function StatusIndicator({ isConnected, onReconnect }) {
         <button
           onClick={onReconnect}
           className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-          title="Reconnect"
+          title="เชื่อมต่อใหม่"
         >
           <RefreshCw size={14} className="text-gray-500" />
         </button>

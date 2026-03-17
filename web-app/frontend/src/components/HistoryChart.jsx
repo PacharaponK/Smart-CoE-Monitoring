@@ -8,7 +8,18 @@ import {
 } from 'recharts';
 import { Activity, TrendingUp, BarChart2 } from 'lucide-react';
 
-const COLORS = ['#3b82f6', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899'];
+const COLORS = [
+  '#3b82f6', // blue
+  '#10b981', // emerald
+  '#8b5cf6', // violet
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#ec4899', // pink
+  '#6366f1', // indigo
+  '#14b8a6', // teal
+];
 
 export default function HistoryChart({ data = [], loading = false }) {
   const [chartType, setChartType] = useState('area'); // 'line', 'area', 'bar'
@@ -29,16 +40,44 @@ export default function HistoryChart({ data = [], loading = false }) {
         }),
         value: typeof item.SensorValue === 'number' ? item.SensorValue : parseFloat(item.SensorValue) || 0,
         type: item.SensorType,
-        deviceId: item.DeviceId
+        deviceId: item.DeviceId,
+        room: item.Room || item.room || item.DeviceId || 'N/A'
       }));
   }, [data]);
 
-  const sensorTypes = useMemo(() => {
-    const types = new Set(formattedData.map(d => d.type));
-    return Array.from(types);
+  const series = useMemo(() => {
+    const uniqueRooms = new Set(formattedData.map(d => d.room));
+    const uniqueTypes = new Set(formattedData.map(d => d.type));
+    
+    const uniqueSeries = new Set();
+    formattedData.forEach(d => {
+      uniqueSeries.add(`${d.room}#${d.type}`);
+    });
+
+    return Array.from(uniqueSeries).map(s => {
+      const [room, type] = s.split('#');
+      let label = `${room} - ${type}`;
+      
+      // Simplify label if only one dimension has multiple values
+      if (uniqueRooms.size === 1 && uniqueTypes.size > 1) {
+        label = type;
+      } else if (uniqueTypes.size === 1 && uniqueRooms.size > 1) {
+        label = room;
+      } else if (uniqueRooms.size === 1 && uniqueTypes.size === 1) {
+        label = type;
+      }
+      
+      return { 
+        key: s, 
+        room, 
+        type, 
+        label,
+        isDigital: type === 'light'
+      };
+    });
   }, [formattedData]);
 
-  // Group data by timestamp for multi-line charts if multiple types exist
+  // Group data by timestamp for multi-series charts
   const groupedData = useMemo(() => {
     const timeMap = {};
     formattedData.forEach(item => {
@@ -46,7 +85,8 @@ export default function HistoryChart({ data = [], loading = false }) {
       if (!timeMap[time]) {
         timeMap[time] = { time };
       }
-      timeMap[time][item.type] = item.value;
+      const seriesKey = `${item.room}#${item.type}`;
+      timeMap[time][seriesKey] = item.value;
     });
     return Object.values(timeMap);
   }, [formattedData]);
@@ -54,8 +94,8 @@ export default function HistoryChart({ data = [], loading = false }) {
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="clay-card !p-3 !rounded-xl text-sm shadow-xl border-none">
-        <p className="font-bold text-gray-700 mb-2 border-b pb-1">{label}</p>
+      <div className="clay-card !p-3 !rounded-xl text-sm shadow-xl border-none max-h-[300px] overflow-y-auto">
+        <p className="font-bold text-gray-700 mb-2 border-b pb-1 sticky top-0 bg-white/80 backdrop-blur-sm z-10">{label}</p>
         {payload.map((entry, i) => (
           <div key={i} className="flex items-center justify-between gap-6 py-0.5">
             <div className="flex items-center gap-2">
@@ -63,7 +103,7 @@ export default function HistoryChart({ data = [], loading = false }) {
               <span className="text-gray-600 font-medium">{entry.name}:</span>
             </div>
             <span className="font-mono font-bold text-gray-900">
-              {entry.name === 'light' 
+              {entry.dataKey?.endsWith('#light') 
                 ? (entry.value === 1 ? 'ON' : 'OFF')
                 : (typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value)}
             </span>
@@ -73,7 +113,7 @@ export default function HistoryChart({ data = [], loading = false }) {
     );
   };
 
-  const isDigitalOnly = sensorTypes.length === 1 && sensorTypes[0] === 'light';
+  const isDigitalOnly = series.length > 0 && series.every(s => s.isDigital);
 
   const renderChart = () => {
     if (loading) {
@@ -92,7 +132,7 @@ export default function HistoryChart({ data = [], loading = false }) {
             <Activity size={40} className="text-gray-200" />
           </div>
           <p className="text-sm font-bold text-gray-600">ไม่พบข้อมูลสำหรับแสดงกราฟ</p>
-          <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-black">Adjust filters to see results</p>
+          <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-black">ปรับตัวกรองเพื่อดูข้อมูล</p>
         </div>
       );
     }
@@ -104,8 +144,8 @@ export default function HistoryChart({ data = [], loading = false }) {
         <ResponsiveContainer width="100%" height="100%">
           <ChartComponent data={groupedData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <defs>
-              {sensorTypes.map((type, i) => (
-                <linearGradient key={type} id={`color-${type}`} x1="0" y1="0" x2="0" y2="1">
+              {series.map((s, i) => (
+                <linearGradient key={s.key} id={`color-${s.key.replace(/[^a-zA-Z0-9]/g, '_')}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.4} />
                   <stop offset="95%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0} />
                 </linearGradient>
@@ -143,44 +183,50 @@ export default function HistoryChart({ data = [], loading = false }) {
                 letterSpacing: '0.05em'
               }}
             />
-            {sensorTypes.map((type, i) => {
+            {series.map((s, i) => {
               const color = COLORS[i % COLORS.length];
-              const isTypeDigital = type === 'light';
+              const isTypeDigital = s.isDigital;
+              const gradientId = `color-${s.key.replace(/[^a-zA-Z0-9]/g, '_')}`;
               
               if (chartType === 'line') {
                 return (
                   <Line
-                    key={type}
+                    key={s.key}
+                    name={s.label}
                     type={isTypeDigital ? "stepAfter" : "monotone"}
-                    dataKey={type}
+                    dataKey={s.key}
                     stroke={color}
-                    strokeWidth={4}
-                    dot={!isTypeDigital ? { r: 5, strokeWidth: 3, fill: 'white', stroke: color } : false}
-                    activeDot={{ r: 8, strokeWidth: 0, fill: color }}
-                    animationDuration={2000}
+                    strokeWidth={3}
+                    dot={!isTypeDigital && series.length < 5 ? { r: 4, strokeWidth: 2, fill: 'white', stroke: color } : false}
+                    activeDot={{ r: 6, strokeWidth: 0, fill: color }}
+                    animationDuration={1500}
+                    connectNulls
                   />
                 );
               } else if (chartType === 'bar') {
                 return (
                   <Bar
-                    key={type}
-                    dataKey={type}
+                    key={s.key}
+                    name={s.label}
+                    dataKey={s.key}
                     fill={color}
-                    radius={[6, 6, 0, 0]}
-                    animationDuration={2000}
+                    radius={[4, 4, 0, 0]}
+                    animationDuration={1500}
                   />
                 );
               } else {
                 return (
                   <Area
-                    key={type}
+                    key={s.key}
+                    name={s.label}
                     type={isTypeDigital ? "stepAfter" : "monotone"}
-                    dataKey={type}
+                    dataKey={s.key}
                     stroke={color}
-                    strokeWidth={4}
+                    strokeWidth={3}
                     fillOpacity={1}
-                    fill={`url(#color-${type})`}
-                    animationDuration={2000}
+                    fill={`url(#${gradientId})`}
+                    animationDuration={1500}
+                    connectNulls
                   />
                 );
               }
@@ -201,8 +247,8 @@ export default function HistoryChart({ data = [], loading = false }) {
             <TrendingUp size={24} />
           </div>
           <div>
-            <h3 className="text-xl font-black text-gray-800 tracking-tight uppercase tracking-widest">แนวโน้มข้อมูล</h3>
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-1">Sensor Analytics & Trends</p>
+            <h3 className="text-xl font-black text-gray-800 tracking-tight uppercase tracking-widest">แนวโน้มข้อมูลแยกตามห้อง</h3>
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-1">สถิติและแนวโน้มทุกห้อง</p>
           </div>
         </div>
 
@@ -214,7 +260,7 @@ export default function HistoryChart({ data = [], loading = false }) {
             }`}
           >
             <Activity size={14} />
-            Area
+            พื้นที่
           </button>
           <button
             onClick={() => setChartType('line')}
@@ -223,7 +269,7 @@ export default function HistoryChart({ data = [], loading = false }) {
             }`}
           >
             <TrendingUp size={14} />
-            Line
+            เส้น
           </button>
           <button
             onClick={() => setChartType('bar')}
@@ -232,7 +278,7 @@ export default function HistoryChart({ data = [], loading = false }) {
             }`}
           >
             <BarChart2 size={14} />
-            Bar
+            แท่ง
           </button>
         </div>
       </div>

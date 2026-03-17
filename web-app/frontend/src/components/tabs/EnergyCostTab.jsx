@@ -103,7 +103,7 @@ export default function EnergyCostTab() {
   }, [allRawItems, deviceId, startTime, endTime, ftRate, serviceCharge]);
 
   const deviceOptions = [
-    { label: 'ทุกอุปกรณ์ (All Devices)', value: '' },
+    { label: 'ทุกอุปกรณ์', value: '' },
     { label: 'R200 (ห้อง 200)', value: 'R200' },
     { label: 'R201 (ห้อง 201)', value: 'R201' },
     { label: 'R303 (ห้อง 303)', value: 'R303' },
@@ -112,7 +112,7 @@ export default function EnergyCostTab() {
 
   const modeOptions = [
     { label: 'รายเดือน (ปัจจุบัน)', value: 'monthly' },
-    { label: 'กำหนดเอง (Custom Range)', value: 'custom' },
+    { label: 'กำหนดเอง', value: 'custom' },
   ];
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -263,7 +263,7 @@ export default function EnergyCostTab() {
               <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
                 <Zap size={28} />
               </div>
-              <span className="text-[10px] font-black bg-white/20 px-2 py-1 rounded-full backdrop-blur-md uppercase tracking-widest">Energy Total</span>
+              <span className="text-[10px] font-black bg-white/20 px-2 py-1 rounded-full backdrop-blur-md uppercase tracking-widest">พลังงานรวม</span>
             </div>
             <div>
               <p className="text-sm font-bold opacity-80 mb-1">พลังงานรวมที่ใช้</p>
@@ -280,7 +280,7 @@ export default function EnergyCostTab() {
               <div className="p-2 bg-emerald-50 rounded-xl text-emerald-500">
                 <DollarSign size={28} />
               </div>
-              <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-widest">Base Rate</span>
+              <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-widest">ค่าไฟฐาน</span>
             </div>
             <div>
               <p className="text-sm font-bold text-gray-400 mb-1">ค่าไฟฟ้าฐาน</p>
@@ -297,7 +297,7 @@ export default function EnergyCostTab() {
               <div className="p-2 bg-orange-50 rounded-xl text-orange-500">
                 <Activity size={28} />
               </div>
-              <span className="text-[10px] font-black text-orange-500 bg-orange-50 px-2 py-1 rounded-full uppercase tracking-widest">Ft Adjustment</span>
+              <span className="text-[10px] font-black text-orange-500 bg-orange-50 px-2 py-1 rounded-full uppercase tracking-widest">ค่า Ft</span>
             </div>
             <div>
               <p className="text-sm font-bold text-gray-400 mb-1">ค่า Ft รวม</p>

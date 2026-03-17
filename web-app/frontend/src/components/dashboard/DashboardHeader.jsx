@@ -18,7 +18,7 @@ export default function DashboardHeader({
           <Monitor className="text-white" size={24} />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Dashboard</h2>
+          <h2 className="text-2xl font-bold text-gray-800 tracking-tight">แดชบอร์ด</h2>
           <div className="flex items-center gap-2 text-sm text-gray-400 mt-0.5">
             <Activity size={14} className="text-emerald-400" />
             <span>ระบบวิเคราะห์ข้อมูล IoT แบบ Real-time</span>

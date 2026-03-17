@@ -119,11 +119,11 @@ export default function HistoryDashboard() {
 
   const sensorTypeOptions = [
     { label: 'ทุกประเภท', value: '' },
-    { label: 'Temperature (อุณหภูมิ)', value: 'temperature' },
-    { label: 'Humidity (ความชื้น)', value: 'humidity' },
-    { label: 'Sound (ระดับเสียง)', value: 'sound' },
-    { label: 'Light (ความสว่าง)', value: 'light' },
-    { label: 'Motion (การเคลื่อนไหว)', value: 'motion' },
+    { label: 'อุณหภูมิ', value: 'temperature' },
+    { label: 'ความชื้น', value: 'humidity' },
+    { label: 'ระดับเสียง', value: 'sound' },
+    { label: 'ความสว่าง', value: 'light' },
+    { label: 'การเคลื่อนไหว', value: 'motion' },
   ];
 
   const roomOptions = [
@@ -157,7 +157,7 @@ export default function HistoryDashboard() {
             <div className="p-2 bg-indigo-50 rounded-xl text-indigo-500">
               <Filter size={20} />
             </div>
-            <h3 className="text-lg font-bold text-gray-700">ตัวกรองข้อมูล (Filters)</h3>
+            <h3 className="text-lg font-bold text-gray-700">ตัวกรองข้อมูล</h3>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -222,7 +222,7 @@ export default function HistoryDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5 ml-1 uppercase tracking-wider">Device ID</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 ml-1 uppercase tracking-wider">รหัสอุปกรณ์</label>
             <div className="relative group">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
               <input
@@ -303,22 +303,22 @@ export default function HistoryDashboard() {
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
           <StatMiniCard
-            title={stats.isLightData ? "สถานะการเปิดไฟ (ON Time)" : "ค่าเฉลี่ยรวม"}
+            title={stats.isLightData ? "สถานะการเปิดไฟ" : "ค่าเฉลี่ยรวม"}
             value={stats.isLightData ? `${(stats.avg * 100).toFixed(1)}%` : stats.avg.toFixed(2)}
             icon={Activity}
             color="text-blue-500"
             bg="bg-blue-50"
           />
           <StatMiniCard
-            title={stats.isLightData ? "สถานะล่าสุด" : "ค่าสูงสุด (Max)"}
-            value={stats.isLightData ? (data[0]?.SensorValue === 1 ? 'เปิด (ON)' : 'ปิด (OFF)') : stats.max.toFixed(2)}
+            title={stats.isLightData ? "สถานะล่าสุด" : "ค่าสูงสุด"}
+            value={stats.isLightData ? (data[0]?.SensorValue === 1 ? 'เปิด' : 'ปิด') : stats.max.toFixed(2)}
             icon={TrendingUp}
             color="text-emerald-500"
             bg="bg-emerald-50"
           />
           <StatMiniCard
-            title={stats.isLightData ? "สถานะต่ำสุด" : "ค่าต่ำสุด (Min)"}
-            value={stats.isLightData ? (stats.min === 1 ? 'เปิด (ON)' : 'ปิด (OFF)') : stats.min.toFixed(2)}
+            title={stats.isLightData ? "สถานะต่ำสุด" : "ค่าต่ำสุด"}
+            value={stats.isLightData ? (stats.min === 1 ? 'เปิด' : 'ปิด') : stats.min.toFixed(2)}
             icon={TrendingUp}
             color="text-orange-500"
             bg="bg-orange-50"

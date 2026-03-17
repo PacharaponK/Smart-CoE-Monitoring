@@ -7,7 +7,7 @@ export default function ClaySelect({
   value,
   onChange,
   options = [],
-  placeholder = 'Select option',
+  placeholder = 'เลือกตัวเลือก',
   label = '',
   icon: Icon = null,
   className = '',
@@ -79,7 +79,7 @@ export default function ClaySelect({
             ))}
             {options.length === 0 && (
               <div className="py-8 text-center text-xs text-gray-400 font-medium italic">
-                No options available
+                ไม่มีตัวเลือก
               </div>
             )}
           </div>

@@ -77,7 +77,7 @@ export default function ImagesTab() {
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">รูปภาพล่าสุด (Latest Snapshot)</span>
+                <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">รูปภาพล่าสุด</span>
               </div>
               <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
                 {formatImageDate(images[0])}
@@ -112,7 +112,7 @@ export default function ImagesTab() {
           <div className="space-y-4">
             <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
               <ImageIcon size={20} className="text-blue-500" />
-              รูปภาพก่อนหน้า (Previous Images)
+              รูปภาพก่อนหน้า
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {images.slice(1).map((url, index) => (

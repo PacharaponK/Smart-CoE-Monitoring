@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
   { id: 'data', label: 'ข้อมูลย้อนหลัง', icon: Database },
   { id: 'energy-cost', label: 'พลังงานและค่าไฟ', icon: Zap },
   { id: 'images', label: 'รูปภาพห้องเรียน', icon: ImageIcon },
@@ -18,10 +18,11 @@ const bottomItems = [
 ];
 
 export default function Sidebar({ activeTab, onTabChange, collapsed, setCollapsed }) {
+  const sidebarWidthClass = collapsed ? 'w-[72px]' : 'w-[72px] sm:w-64';
+
   return (
     <aside
-      className={`fixed top-0 left-0 h-screen bg-white z-30 flex flex-col transition-all duration-300 ease-in-out ${collapsed ? 'w-[72px]' : 'w-64'
-        }`}
+      className={`fixed top-0 bottom-0 left-0 bg-white z-30 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${sidebarWidthClass}`}
       style={{
         boxShadow: '8px 0 24px #d1d1d9',
       }}
@@ -34,7 +35,7 @@ export default function Sidebar({ activeTab, onTabChange, collapsed, setCollapse
           className="w-10 h-10 rounded-2xl flex-shrink-0 object-cover"
         />
         {!collapsed && (
-          <div className="overflow-hidden">
+          <div className="hidden sm:block overflow-hidden">
             <h1 className="text-sm font-bold text-gray-800 whitespace-nowrap">Smart CoE</h1>
             <p className="text-xs text-gray-400 whitespace-nowrap">ระบบตรวจวัด IoT</p>
           </div>
@@ -42,7 +43,7 @@ export default function Sidebar({ activeTab, onTabChange, collapsed, setCollapse
       </div>
 
       {/* Main Menu */}
-      <nav className="flex-1 py-4 px-3 space-y-1">
+      <nav className="flex-1 min-h-0 overflow-y-auto py-4 px-3 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -58,10 +59,10 @@ export default function Sidebar({ activeTab, onTabChange, collapsed, setCollapse
             >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className="flex-shrink-0" />
               {!collapsed && (
-                <span className="text-sm whitespace-nowrap">{item.label}</span>
+                <span className="hidden sm:inline text-sm whitespace-nowrap">{item.label}</span>
               )}
               {isActive && !collapsed && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <div className="hidden sm:block ml-auto w-1.5 h-1.5 rounded-full bg-blue-500" />
               )}
             </button>
           );
@@ -82,7 +83,7 @@ export default function Sidebar({ activeTab, onTabChange, collapsed, setCollapse
             >
               <Icon size={20} className="flex-shrink-0" />
               {!collapsed && (
-                <span className="text-sm whitespace-nowrap">{item.label}</span>
+                <span className="hidden sm:inline text-sm whitespace-nowrap">{item.label}</span>
               )}
             </button>
           );
@@ -92,8 +93,8 @@ export default function Sidebar({ activeTab, onTabChange, collapsed, setCollapse
       {/* Collapse Toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute top-7 -right-3 w-6 h-6 rounded-full bg-white shadow-md border border-gray-200 
-          flex items-center justify-center hover:bg-gray-50 transition-colors z-10"
+        className="hidden sm:flex absolute top-7 -right-3 w-6 h-6 rounded-full bg-white shadow-md border border-gray-200 
+          items-center justify-center hover:bg-gray-50 transition-colors z-10"
       >
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>

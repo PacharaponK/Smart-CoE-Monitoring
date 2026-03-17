@@ -4,7 +4,7 @@ export default function SettingsTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-800">ตั้งค่า (Settings)</h2>
+        <h2 className="text-2xl font-bold text-gray-800">ตั้งค่า</h2>
         <p className="text-sm text-gray-400 mt-1">
           กำหนดค่าการทำงานและความชอบส่วนตัว
         </p>

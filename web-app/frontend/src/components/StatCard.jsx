@@ -62,7 +62,7 @@ export default function StatCard({
                 <span>{trend >= 0 ? '↑' : '↓'}</span>
               </div>
               <span>{Math.abs(trend)}%</span>
-              <span className="text-gray-400 opacity-60">Prev. Hour</span>
+              <span className="text-gray-400 opacity-60">ชั่วโมงก่อน</span>
             </div>
           )}
           {subtitle && (

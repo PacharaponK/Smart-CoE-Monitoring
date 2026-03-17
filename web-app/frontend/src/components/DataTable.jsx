@@ -130,12 +130,12 @@ export default function DataTable({ externalData = null, externalLoading = false
   };
 
   const sensorTypeOptions = [
-    { label: 'ทุกประเภท (All Types)', value: '' },
-    { label: 'Temperature (อุณหภูมิ)', value: 'temperature' },
-    { label: 'Humidity (ความชื้น)', value: 'humidity' },
-    { label: 'Sound (ระดับเสียง)', value: 'sound' },
-    { label: 'Light (ความสว่าง)', value: 'light' },
-    { label: 'Motion (การเคลื่อนไหว)', value: 'motion' },
+    { label: 'ทุกประเภท', value: '' },
+    { label: 'อุณหภูมิ', value: 'temperature' },
+    { label: 'ความชื้น', value: 'humidity' },
+    { label: 'ระดับเสียง', value: 'sound' },
+    { label: 'ความสว่าง', value: 'light' },
+    { label: 'การเคลื่อนไหว', value: 'motion' },
   ];
 
   const roomOptions = [
@@ -206,7 +206,7 @@ export default function DataTable({ externalData = null, externalLoading = false
         <div className="clay-card-inset mb-6 animate-slide-up">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 ml-1 uppercase tracking-wider">Device ID</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 ml-1 uppercase tracking-wider">รหัสอุปกรณ์</label>
               <div className="relative group">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <input
@@ -221,7 +221,7 @@ export default function DataTable({ externalData = null, externalLoading = false
             </div>
             
             <ClaySelect
-              label="Sensor Type (ประเภทเซ็นเซอร์)"
+              label="ประเภทเซ็นเซอร์"
               value={sensorType}
               onChange={setSensorType}
               options={sensorTypeOptions}
@@ -229,7 +229,7 @@ export default function DataTable({ externalData = null, externalLoading = false
             />
 
             <ClaySelect
-              label="Room (ห้อง)"
+              label="ห้อง"
               value={room}
               onChange={setRoom}
               options={roomOptions}
