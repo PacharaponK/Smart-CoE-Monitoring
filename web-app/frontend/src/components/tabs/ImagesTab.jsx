@@ -88,6 +88,7 @@ export default function ImagesTab() {
                 src={images[0]}
                 alt="Latest classroom snapshot"
                 className="w-full h-full object-cover"
+                style={{ transform: 'rotate(180deg)' }}
               />
               <div className="absolute bottom-6 left-6 right-6 flex justify-end">
                 <a
@@ -122,6 +123,7 @@ export default function ImagesTab() {
                       src={url}
                       alt={`Classroom view ${index + 1}`}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      style={{ transform: 'rotate(180deg)' }}
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
